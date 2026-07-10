@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ScheduleSource {
+  manual
+  whatsapp
+  google_calendar
+}
+
+enum ExpenseSource {
+  manual
+  whatsapp
+}
+
+enum HabitFrequency {
+  daily
+  weekly
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  name                String?
+  email               String               @unique
+  passwordHash        String
+  phoneNumber         String?              @unique
+  schedules           Schedule[]
+  expenses            Expense[]
+  habits              Habit[]
+  whatsappMessageLogs WhatsAppMessageLog[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+model Schedule {
+  id          String         @id @default(cuid())
+  title       String
+  description String?
+  date        DateTime
+  startTime   String
+  endTime     String?
+  location    String?
+  source      ScheduleSource @default(manual)
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([userId, date])
+}
+
+model Expense {
+  id        String        @id @default(cuid())
+  amount    Int
+  category  String
+  note      String?
+  date      DateTime
+  source    ExpenseSource @default(manual)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([userId, date])
+  @@index([userId, category])
+}
+
+model Habit {
+  id        String         @id @default(cuid())
+  name      String
+  frequency HabitFrequency @default(daily)
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs      HabitLog[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([userId])
+}
+
+model HabitLog {
+  id          String   @id @default(cuid())
+  habitId     String
+  habit       Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  completedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([habitId, completedAt])
+}
+
+model WhatsAppMessageLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  from        String?
+  messageId   String?
+  command     String?
+  rawPayload  Json
+  response    String?
+  status      String   @default("received")
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([messageId])
+}

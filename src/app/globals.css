@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --background: #f8f4ec;
+  --foreground: #17201b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background:
+    linear-gradient(135deg, rgba(63, 91, 71, 0.12), transparent 32rem),
+    radial-gradient(circle at top right, rgba(176, 95, 60, 0.12), transparent 26rem),
+    var(--background);
+  color: var(--foreground);
+  font-family: Aptos, "Segoe UI", sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #b05f3c;
+  outline-offset: 2px;
+}
+
+@layer components {
+  .panel {
+    @apply border border-line bg-white/80 shadow-panel backdrop-blur;
+  }
+
+  .field {
+    @apply w-full rounded-md border border-line bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-clay;
+  }
+
+  .label {
+    @apply text-xs font-semibold uppercase tracking-wide text-ink/60;
+  }
+
+  .button-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-moss;
+  }
+
+  .button-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-line bg-white px-3 py-2 text-sm font-semibold text-ink transition hover:border-moss hover:text-moss;
+  }
+
+  .button-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-100;
+  }
+}
