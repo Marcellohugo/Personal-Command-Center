@@ -90,6 +90,21 @@ const agendaDashboardSections = [modules[0], modules[4], modules[2], modules[3],
 const dashboardSections = [sections[0], ...financeDashboardSections, ...agendaDashboardSections, modules[4]];
 const dashboardNavigation = [sections[0], { ...modules[1], label: "Keuangan" }, modules[0], modules[4], modules[2], modules[3], sections[1], modules[5]];
 
+const sectionTones: Record<Section, string> = {
+  overview: "bg-blue-100 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300",
+  transaksi: "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300",
+  sources: "bg-sky-100 text-sky-700 dark:bg-sky-400/15 dark:text-sky-300",
+  goals: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-400/15 dark:text-fuchsia-300",
+  recurring: "bg-orange-100 text-orange-700 dark:bg-orange-400/15 dark:text-orange-300",
+  categories: "bg-teal-100 text-teal-700 dark:bg-teal-400/15 dark:text-teal-300",
+  agenda: "bg-violet-100 text-violet-700 dark:bg-violet-400/15 dark:text-violet-300",
+  proyek: "bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300",
+  kebiasaan: "bg-rose-100 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300",
+  perkembangan: "bg-cyan-100 text-cyan-700 dark:bg-cyan-400/15 dark:text-cyan-300",
+  notes: "bg-indigo-100 text-indigo-700 dark:bg-indigo-400/15 dark:text-indigo-300",
+  pengaturan: "bg-slate-200 text-slate-700 dark:bg-slate-400/15 dark:text-slate-300"
+};
+
 const pageDescriptions: Record<Section, string> = {
   overview: "Lihat apa yang penting hari ini dan pilih satu langkah kecil.",
   notes: "Tangkap ide, rapikan pikiran, dan ubah catatan menjadi aksi.",
@@ -628,7 +643,7 @@ export function CommandCenter() {
       <div className="mx-auto max-w-7xl">
         <header className="page-toolbar">
           <div className="flex min-w-0 items-start gap-3">
-            <span className="brand-mark mt-0.5 hidden sm:grid"><ActivePageIcon className="h-5 w-5" aria-hidden="true" /></span>
+            <span className={cn("section-icon mt-0.5 hidden sm:grid", sectionTones[active])}><ActivePageIcon className="h-5 w-5" aria-hidden="true" /></span>
             <div className="min-w-0">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-clay">
                 Pusat kendali
@@ -700,15 +715,15 @@ export function CommandCenter() {
 
             <section className="grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label="Ringkasan keuangan">
               {[
-                { label: "Total aset", value: displayMoney(summaries.assets), icon: Banknote },
-                { label: "Kewajiban", value: displayMoney(summaries.liabilities), icon: CreditCard },
-                { label: "Tabungan", value: displayMoney(summaries.goalSaved), icon: PiggyBank },
-                { label: "Mendatang", value: String(summaries.upcoming), icon: CalendarClock }
+                { label: "Total aset", value: displayMoney(summaries.assets), icon: Banknote, tone: sectionTones.sources },
+                { label: "Kewajiban", value: displayMoney(summaries.liabilities), icon: CreditCard, tone: sectionTones.kebiasaan },
+                { label: "Tabungan", value: displayMoney(summaries.goalSaved), icon: PiggyBank, tone: sectionTones.goals },
+                { label: "Mendatang", value: String(summaries.upcoming), icon: CalendarClock, tone: sectionTones.agenda }
               ].map((metric) => {
                 const Icon = metric.icon;
                 return (
                   <article className="panel metric-card group" key={metric.label}>
-                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-blue-700 transition group-hover:scale-105 dark:bg-blue-400/10 dark:text-blue-300"><Icon className="h-5 w-5" aria-hidden="true" /></span>
+                    <span className={cn("metric-icon", metric.tone)}><Icon className="h-5 w-5" aria-hidden="true" /></span>
                     <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-ink/45 dark:text-paper/45">{metric.label}</p>
                     <p className="mt-1 break-words text-lg font-black text-ink sm:text-xl dark:text-paper">{metric.value}</p>
                   </article>
@@ -726,7 +741,7 @@ export function CommandCenter() {
                 <div className="mt-5 grid gap-2 sm:grid-cols-2">
                   {financeDashboardSections.map((section) => {
                     const Icon = section.icon;
-                    return <button key={section.id} type="button" onClick={() => changeSection(section.id)} className="workspace-link"><Icon className="h-4 w-4 text-clay" />{section.label}</button>;
+                    return <button key={section.id} type="button" onClick={() => changeSection(section.id)} className="workspace-link"><span className={cn("workspace-link-icon", sectionTones[section.id])}><Icon className="h-4 w-4" /></span>{section.label}<ArrowRight className="ml-auto h-4 w-4 text-ink/25 dark:text-paper/25" /></button>;
                   })}
                 </div>
               </article>
@@ -738,7 +753,7 @@ export function CommandCenter() {
                 <div className="mt-5 grid gap-2">
                   {agendaDashboardSections.map((section) => {
                     const Icon = section.icon;
-                    return <button key={section.id} type="button" onClick={() => changeSection(section.id)} className="workspace-link"><Icon className="h-4 w-4 text-moss dark:text-emerald-300" />{section.label}</button>;
+                    return <button key={section.id} type="button" onClick={() => changeSection(section.id)} className="workspace-link"><span className={cn("workspace-link-icon", sectionTones[section.id])}><Icon className="h-4 w-4" /></span>{section.label}<ArrowRight className="ml-auto h-4 w-4 text-ink/25 dark:text-paper/25" /></button>;
                   })}
                 </div>
               </article>
@@ -925,10 +940,10 @@ export function CommandCenter() {
                 type="button"
                 key={section.id}
                 onClick={() => changeSection(section.id)}
-                className={cn("nav-item", selected && "nav-item-active")}
+                className={cn("group nav-item", selected && "nav-item-active")}
                 aria-current={selected ? "page" : undefined}
               >
-                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className={cn("nav-icon", selected ? "bg-white/15 text-white" : sectionTones[section.id])}><Icon className="h-4 w-4" aria-hidden="true" /></span>
                 {section.label}
               </button>
             );
@@ -962,7 +977,7 @@ export function CommandCenter() {
                 className={cn("mobile-nav-item", selected && "mobile-nav-item-active")}
                 aria-current={selected ? "page" : undefined}
               >
-                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span className={cn("mobile-nav-icon", selected ? "bg-white/15 text-white" : sectionTones[section.id])}><Icon className="h-4 w-4" aria-hidden="true" /></span>
                 {section.id === "perkembangan" ? "Tumbuh" : section.label}
               </button>
             );

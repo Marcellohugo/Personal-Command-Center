@@ -8,13 +8,13 @@ type CaptureKind = "transaction" | "schedule" | "ticket" | "note" | "habit" | "f
 type Props = { workspace: OfflineWorkspace; updateWorkspace: (updater: (current: OfflineWorkspace) => OfflineWorkspace) => void };
 
 const choices = [
-  { id: "transaction" as const, label: "Transaksi", icon: ReceiptText },
-  { id: "schedule" as const, label: "Agenda", icon: CalendarDays },
-  { id: "ticket" as const, label: "Ticket", icon: PanelsTopLeft },
-  { id: "note" as const, label: "Note", icon: NotebookPen },
-  { id: "habit" as const, label: "Habit", icon: ClipboardCheck },
-  { id: "focus" as const, label: "Fokus", icon: Timer },
-  { id: "goal" as const, label: "Goal", icon: Target }
+  { id: "transaction" as const, label: "Transaksi", icon: ReceiptText, tone: "bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-400/15 dark:text-emerald-300" },
+  { id: "schedule" as const, label: "Agenda", icon: CalendarDays, tone: "bg-violet-100 text-violet-700 hover:bg-violet-200 dark:bg-violet-400/15 dark:text-violet-300" },
+  { id: "ticket" as const, label: "Ticket", icon: PanelsTopLeft, tone: "bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-400/15 dark:text-amber-300" },
+  { id: "note" as const, label: "Note", icon: NotebookPen, tone: "bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-400/15 dark:text-indigo-300" },
+  { id: "habit" as const, label: "Habit", icon: ClipboardCheck, tone: "bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-400/15 dark:text-rose-300" },
+  { id: "focus" as const, label: "Fokus", icon: Timer, tone: "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 dark:bg-cyan-400/15 dark:text-cyan-300" },
+  { id: "goal" as const, label: "Goal", icon: Target, tone: "bg-fuchsia-100 text-fuchsia-700 hover:bg-fuchsia-200 dark:bg-fuchsia-400/15 dark:text-fuchsia-300" }
 ];
 
 function today() {
@@ -61,7 +61,7 @@ export function QuickCapture({ workspace, updateWorkspace }: Props) {
     {open ? <div className="fixed inset-0 z-50 grid place-items-end bg-slate-950/55 p-3 backdrop-blur-sm sm:place-items-center" role="dialog" aria-modal="true" aria-label="Tambah cepat">
       <section className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-[#081a36]">
         <header className="flex items-center justify-between border-b border-line p-5 dark:border-white/10"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-blue-600">Quick capture</p><h2 className="mt-1 text-xl font-black">Catat sebelum terlupa</h2></div><button type="button" className="button-secondary h-10 w-10 p-0" onClick={close} aria-label="Tutup"><X className="h-4 w-4" /></button></header>
-        <div className="grid grid-cols-4 gap-2 p-4 sm:grid-cols-7">{choices.map(({ id, label, icon: Icon }) => <button type="button" key={id} className={`grid justify-items-center gap-1 rounded-xl px-2 py-3 text-xs font-bold transition ${kind === id ? "bg-blue-600 text-white" : "bg-blue-50 text-blue-800 hover:bg-blue-100 dark:bg-white/5 dark:text-blue-100"}`} onClick={() => setKind(id)}><Icon className="h-4 w-4" />{label}</button>)}</div>
+        <div className="grid grid-cols-4 gap-2 p-4 sm:grid-cols-7">{choices.map(({ id, label, icon: Icon, tone }) => <button type="button" key={id} className={`grid justify-items-center gap-1.5 rounded-xl px-2 py-3 text-xs font-bold transition hover:-translate-y-0.5 ${kind === id ? "bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md" : tone}`} onClick={() => setKind(id)}><Icon className="h-5 w-5" />{label}</button>)}</div>
         <form className="grid gap-4 border-t border-line p-5 dark:border-white/10 sm:grid-cols-2" onSubmit={save} key={kind}>
           <label className="grid gap-2 sm:col-span-2"><span className="label">{kind === "transaction" ? "Catatan transaksi" : kind === "habit" ? "Nama habit" : kind === "focus" ? "Aktivitas fokus" : selected.label}</span><input className="field min-h-11" name="title" autoFocus maxLength={160} required placeholder={`Tulis ${selected.label.toLowerCase()}…`} /></label>
           {kind === "note" ? <label className="grid gap-2 sm:col-span-2"><span className="label">Isi</span><textarea className="field min-h-28 resize-y" name="content" maxLength={5000} /></label> : null}

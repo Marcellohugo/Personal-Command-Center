@@ -1,17 +1,25 @@
 "use client";
 
 import {
+  ArrowLeftRight,
   BarChart3,
   CalendarDays,
   CircleDollarSign,
+  Coins,
+  CreditCard,
   Download,
   FileCheck2,
+  Landmark,
+  LayoutDashboard,
   LockKeyhole,
+  PieChart,
   PiggyBank,
   ReceiptText,
   ShieldCheck,
+  TrendingUp,
   Upload,
-  WalletCards
+  WalletCards,
+  type LucideIcon
 } from "lucide-react";
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import { TransactionsPanel } from "@/components/command-center/transactions-panel";
@@ -40,13 +48,13 @@ type Props = {
   onNavigate: (section: "sources" | "goals" | "recurring" | "categories" | "pengaturan") => void;
 };
 
-const tabs: Array<{ id: FinanceTab; label: string }> = [
-  { id: "overview", label: "Ringkasan" },
-  { id: "transactions", label: "Transaksi" },
-  { id: "budget", label: "Anggaran" },
-  { id: "forecast", label: "Arus kas" },
-  { id: "wealth", label: "Utang & aset" },
-  { id: "records", label: "Impor & audit" }
+const tabs: Array<{ id: FinanceTab; label: string; icon: LucideIcon; tone: string }> = [
+  { id: "overview", label: "Ringkasan", icon: LayoutDashboard, tone: "bg-blue-100 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300" },
+  { id: "transactions", label: "Transaksi", icon: ArrowLeftRight, tone: "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300" },
+  { id: "budget", label: "Anggaran", icon: PieChart, tone: "bg-violet-100 text-violet-700 dark:bg-violet-400/15 dark:text-violet-300" },
+  { id: "forecast", label: "Arus kas", icon: TrendingUp, tone: "bg-cyan-100 text-cyan-700 dark:bg-cyan-400/15 dark:text-cyan-300" },
+  { id: "wealth", label: "Utang & aset", icon: Landmark, tone: "bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300" },
+  { id: "records", label: "Impor & audit", icon: FileCheck2, tone: "bg-rose-100 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300" }
 ];
 
 function dateOnly() {
@@ -67,9 +75,10 @@ function amount(value: number, hidden: boolean, currency: string) {
   return hidden ? "••••••" : formatCurrency(value, currency);
 }
 
-function Metric({ label, value, tone = "blue" }: { label: string; value: string; tone?: "blue" | "green" | "red" }) {
+function Metric({ label, value, icon: Icon, tone = "blue" }: { label: string; value: string; icon: LucideIcon; tone?: "blue" | "green" | "red" }) {
   const color = tone === "green" ? "text-emerald-700 dark:text-emerald-300" : tone === "red" ? "text-red-700 dark:text-red-300" : "text-blue-700 dark:text-blue-300";
-  return <article className="panel rounded-2xl p-4"><p className="text-xs font-bold uppercase tracking-wide text-ink/45 dark:text-paper/45">{label}</p><p className={`mt-2 text-xl font-black ${color}`}>{value}</p></article>;
+  const iconColor = tone === "green" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300" : tone === "red" ? "bg-rose-100 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300" : "bg-blue-100 text-blue-700 dark:bg-blue-400/15 dark:text-blue-300";
+  return <article className="panel flex items-center gap-3 rounded-2xl p-4"><span className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl ${iconColor}`}><Icon className="h-5 w-5" aria-hidden="true" /></span><div><p className="text-xs font-bold uppercase tracking-wide text-ink/45 dark:text-paper/45">{label}</p><p className={`mt-1 text-xl font-black ${color}`}>{value}</p></div></article>;
 }
 
 export function FinanceCenter({ workspace, updateWorkspace, onNavigate }: Props) {
@@ -157,15 +166,15 @@ export function FinanceCenter({ workspace, updateWorkspace, onNavigate }: Props)
       </header>
 
       <nav className="flex gap-2 overflow-x-auto pb-1" aria-label="Bagian pusat keuangan">
-        {tabs.map((item) => <button type="button" key={item.id} onClick={() => setTab(item.id)} className={tab === item.id ? "button-primary shrink-0" : "button-secondary shrink-0"}>{item.label}</button>)}
+        {tabs.map((item) => { const Icon = item.icon; return <button type="button" key={item.id} onClick={() => setTab(item.id)} className={tab === item.id ? "button-primary shrink-0" : "button-secondary shrink-0"}><span className={`grid h-7 w-7 place-items-center rounded-lg ${tab === item.id ? "bg-white/15 text-white" : item.tone}`}><Icon className="h-4 w-4" aria-hidden="true" /></span>{item.label}</button>; })}
       </nav>
 
       {tab === "overview" ? <>
         <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Metric label="Pemasukan" value={amount(report.income, hidden, currency)} tone="green" />
-          <Metric label="Pengeluaran" value={amount(report.expense, hidden, currency)} tone="red" />
-          <Metric label="Arus bersih" value={amount(report.net, hidden, currency)} tone={report.net >= 0 ? "green" : "red"} />
-          <Metric label="Kekayaan bersih" value={amount(worth.net, hidden, currency)} tone={worth.net >= 0 ? "blue" : "red"} />
+          <Metric label="Pemasukan" value={amount(report.income, hidden, currency)} icon={CircleDollarSign} tone="green" />
+          <Metric label="Pengeluaran" value={amount(report.expense, hidden, currency)} icon={ReceiptText} tone="red" />
+          <Metric label="Arus bersih" value={amount(report.net, hidden, currency)} icon={ArrowLeftRight} tone={report.net >= 0 ? "green" : "red"} />
+          <Metric label="Kekayaan bersih" value={amount(worth.net, hidden, currency)} icon={Landmark} tone={worth.net >= 0 ? "blue" : "red"} />
         </section>
         <section className="panel rounded-2xl p-5">
           <div className="flex flex-wrap items-start justify-between gap-3"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-600/10 text-blue-700 dark:text-blue-300"><CalendarDays className="h-5 w-5" /></span><div><h3 className="font-black">Peta gajian & kewajiban</h3><p className="mt-1 text-xs text-ink/45 dark:text-paper/45">Tagihan, cicilan, hutang, dan tabungan otomatis dikelompokkan ke gajian sebelumnya.</p></div></div>{paydays.rows.length ? <div className="text-right"><p className="text-xs font-bold uppercase tracking-wide text-ink/40 dark:text-paper/40">{workspace.settings.paydays.length}× gajian · kewajiban {amount(paydays.totalObligations, hidden, currency)}</p><p className="font-black text-emerald-700 dark:text-emerald-300">{amount(paydays.totalIncome, hidden, currency)}</p></div> : null}</div>
@@ -190,7 +199,7 @@ export function FinanceCenter({ workspace, updateWorkspace, onNavigate }: Props)
       {tab === "transactions" ? <TransactionsPanel workspace={workspace} updateWorkspace={updateWorkspace} hideBalances={hidden} /> : null}
 
       {tab === "budget" ? <>
-        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4"><Metric label="Direncanakan" value={amount(budget.planned, hidden, currency)} /><Metric label="Aktual" value={amount(budget.actual, hidden, currency)} tone={budget.remaining < 0 ? "red" : "blue"} /><Metric label="Sisa" value={amount(budget.remaining, hidden, currency)} tone={budget.remaining >= 0 ? "green" : "red"} /><Metric label="Belum dialokasikan" value={amount(budget.unallocated, hidden, currency)} /></section>
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4"><Metric label="Direncanakan" value={amount(budget.planned, hidden, currency)} icon={PieChart} /><Metric label="Aktual" value={amount(budget.actual, hidden, currency)} icon={ReceiptText} tone={budget.remaining < 0 ? "red" : "blue"} /><Metric label="Sisa" value={amount(budget.remaining, hidden, currency)} icon={WalletCards} tone={budget.remaining >= 0 ? "green" : "red"} /><Metric label="Belum dialokasikan" value={amount(budget.unallocated, hidden, currency)} icon={Coins} /></section>
         <form className="panel grid gap-4 rounded-2xl p-5" onSubmit={saveBudgets} key={`${month}:${workspace.budgetPlans.length}`}>
           <div className="flex flex-wrap items-center justify-between gap-3"><div><h3 className="font-black">Rencana anggaran {month}</h3><p className="text-xs text-ink/45 dark:text-paper/45">Atur planned vs actual. Rollover membawa sisa bulan lalu.</p></div><div className="flex gap-2"><select className="field" value={workspace.settings.budgetMethod} onChange={(event) => updateWorkspace((current) => ({ ...current, settings: { ...current.settings, budgetMethod: event.target.value as OfflineWorkspace["settings"]["budgetMethod"] } }))}><option value="category">Per kategori</option><option value="envelope">Amplop</option><option value="zero_based">Zero-based</option></select><label className="button-secondary"><input type="checkbox" checked={workspace.settings.budgetRollover} onChange={(event) => updateWorkspace((current) => ({ ...current, settings: { ...current.settings, budgetRollover: event.target.checked } }))} /> Rollover</label></div></div>
           <div className="grid gap-3">{budget.rows.map((row) => <div className="grid items-end gap-3 rounded-xl border border-line p-3 sm:grid-cols-[1fr_160px_140px] dark:border-white/10" key={row.categoryId}><div><p className="font-bold">{row.name}</p><p className={`text-xs ${row.remaining < 0 ? "text-red-600" : "text-ink/45 dark:text-paper/45"}`}>Aktual {amount(row.actual, hidden, currency)} · sisa {amount(row.remaining, hidden, currency)}</p><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-ink/10 dark:bg-white/10"><div className={row.progress > 1 ? "h-full bg-red-500" : "h-full bg-blue-600"} style={{ width: `${Math.min(100, row.progress * 100)}%` }} /></div></div><label className="grid gap-1"><span className="label">Rencana</span><input className="field" name={`planned:${row.categoryId}`} type="number" min="0" step="1000" defaultValue={row.planned} /></label><label className="grid gap-1"><span className="label">Rollover</span><input className="field" name={`rollover:${row.categoryId}`} type="number" min="0" step="1000" defaultValue={row.rollover} /></label></div>)}{!budget.rows.length ? <p className="text-sm text-ink/45 dark:text-paper/45">Tambahkan kategori pengeluaran terlebih dahulu.</p> : null}</div>
@@ -205,7 +214,7 @@ export function FinanceCenter({ workspace, updateWorkspace, onNavigate }: Props)
       </> : null}
 
       {tab === "wealth" ? <>
-        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4"><Metric label="Aset" value={amount(worth.assets, hidden, currency)} /><Metric label="Kewajiban" value={amount(worth.liabilities, hidden, currency)} tone="red" /><Metric label="Nilai investasi" value={amount(investments.value, hidden, currency)} /><Metric label="Gain + dividen" value={amount(investments.gain, hidden, currency)} tone={investments.gain >= 0 ? "green" : "red"} /></section>
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-4"><Metric label="Aset" value={amount(worth.assets, hidden, currency)} icon={Landmark} /><Metric label="Kewajiban" value={amount(worth.liabilities, hidden, currency)} icon={CreditCard} tone="red" /><Metric label="Nilai investasi" value={amount(investments.value, hidden, currency)} icon={TrendingUp} /><Metric label="Gain + dividen" value={amount(investments.gain, hidden, currency)} icon={PiggyBank} tone={investments.gain >= 0 ? "green" : "red"} /></section>
         <section className="grid gap-4 lg:grid-cols-2">
           <article className="panel rounded-2xl p-5"><div className="flex items-end justify-between gap-3"><div><h3 className="font-black">Strategi pelunasan utang</h3><p className="text-xs text-ink/45 dark:text-paper/45">Snowball: saldo terkecil. Avalanche: bunga tertinggi.</p></div><label className="grid gap-1"><span className="label">Bayar ekstra / bulan</span><input className="field w-40" type="number" min="0" step="50000" value={extraPayment} onChange={(event) => setExtraPayment(Number(event.target.value) || 0)} /></label></div><div className="mt-4 grid gap-3">{debts.map((debt) => { const projection = debtProjection(debt, extraPayment); return <div className="rounded-xl border border-line p-3 dark:border-white/10" key={debt.id}><div className="flex justify-between gap-3"><p className="font-bold">{debt.name}</p><p className="font-black text-red-600">{amount(Math.abs(debt.balance), hidden, currency)}</p></div><p className="mt-1 text-xs text-ink/45 dark:text-paper/45">Bunga {debt.annualInterestRate ?? 0}% · bayar {amount(projection.payment, hidden, currency)} · {projection.payoffMonths ? `lunas ${projection.payoffMonths} bulan, bunga ${amount(projection.totalInterest, hidden, currency)}` : "isi bunga dan minimum bayar agar proyeksi tersedia"}</p></div>; })}{!debts.length ? <p className="text-sm text-ink/45 dark:text-paper/45">Belum ada sumber bertipe utang atau kartu kredit.</p> : null}</div>{debts.length > 1 ? <div className="mt-4 grid gap-2 rounded-xl bg-blue-50 p-3 text-sm dark:bg-blue-400/10"><p><strong>Urutan snowball:</strong> {[...debts].sort((a, b) => Math.abs(a.balance) - Math.abs(b.balance)).map(({ name }) => name).join(" → ")}</p><p><strong>Urutan avalanche:</strong> {[...debts].sort((a, b) => (b.annualInterestRate ?? 0) - (a.annualInterestRate ?? 0)).map(({ name }) => name).join(" → ")}</p></div> : null}</article>
           <form className="panel grid gap-3 rounded-2xl p-5 sm:grid-cols-2" onSubmit={saveInvestment}><div className="sm:col-span-2"><h3 className="font-black">Tambah kepemilikan investasi</h3><p className="text-xs text-ink/45 dark:text-paper/45">Nilai diperbarui manual agar tetap mandiri dan tanpa layanan berbayar.</p></div><label className="grid gap-1"><span className="label">Nama</span><input className="field" name="name" required /></label><label className="grid gap-1"><span className="label">Simbol</span><input className="field" name="symbol" placeholder="BBCA" /></label><label className="grid gap-1"><span className="label">Jenis</span><select className="field" name="kind"><option value="stock">Saham</option><option value="fund">Reksa dana</option><option value="crypto">Kripto</option><option value="bond">Obligasi</option><option value="gold">Emas</option><option value="other">Lainnya</option></select></label><label className="grid gap-1"><span className="label">Akun</span><select className="field" name="sourceId"><option value="">Tanpa akun</option>{workspace.moneySources.map((source) => <option value={source.id} key={source.id}>{source.name}</option>)}</select></label><label className="grid gap-1"><span className="label">Unit</span><input className="field" name="units" type="number" min="0" step="any" required /></label><label className="grid gap-1"><span className="label">Harga beli / unit</span><input className="field" name="costBasis" type="number" min="0" step="any" required /></label><label className="grid gap-1"><span className="label">Harga kini / unit</span><input className="field" name="currentPrice" type="number" min="0" step="any" required /></label><label className="grid gap-1"><span className="label">Total dividen</span><input className="field" name="dividends" type="number" min="0" step="any" /></label><button className="button-primary w-fit" type="submit">Tambah investasi</button></form>
