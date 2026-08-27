@@ -109,6 +109,32 @@ export function levelFromXp(totalXp: number) {
   return 1 + Math.floor(Math.max(0, totalXp) / 250);
 }
 
+export function bestStreak(dates: string[]) {
+  let best = 0;
+  let current = 0;
+  let previous = "";
+  for (const date of Array.from(new Set(dates.map((item) => item.slice(0, 10)))).sort()) {
+    current = previous && addDays(previous, 1) === date ? current + 1 : 1;
+    best = Math.max(best, current);
+    previous = date;
+  }
+  return best;
+}
+
+export function achievementProgress(workspace: OfflineWorkspace) {
+  const xp = workspace.gamification.totalXp;
+  const streak = bestStreak(workspace.gamification.ritualDays);
+  const perfectDays = workspace.gamification.perfectDays.length;
+  const milestones = [
+    { id: "first-step", title: "Langkah Pertama", description: "Kumpulkan 10 XP", current: xp, target: 10 },
+    { id: "momentum", title: "Momentum", description: "Kumpulkan 100 XP", current: xp, target: 100 },
+    { id: "streak-3", title: "Api Menyala", description: "Streak 3 hari", current: streak, target: 3 },
+    { id: "perfect-3", title: "Tiga Hari Sempurna", description: "Raih 3 Perfect Day", current: perfectDays, target: 3 },
+    { id: "level-3", title: "Naik Kelas", description: "Capai Level 3", current: levelFromXp(xp), target: 3 }
+  ];
+  return milestones.map((item) => ({ ...item, unlocked: item.current >= item.target, progress: Math.min(100, Math.round(item.current / item.target * 100)) }));
+}
+
 export function goalEvidence(workspace: OfflineWorkspace, goal: GrowthGoal, range?: { start: string; end: string }) {
   const inRange = (date: string) => !range || (date.slice(0, 10) >= range.start && date.slice(0, 10) <= range.end);
   const priorities = workspace.priorities.filter((item) => item.link?.type === "goal" && item.link.id === goal.id && item.done && inRange(item.date)).length;

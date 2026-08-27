@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { completeEvening, completeMorning, currentStreak, levelFromXp, upsertPriority } from "@/lib/life-os";
+import { achievementProgress, bestStreak, completeEvening, completeMorning, currentStreak, levelFromXp, upsertPriority } from "@/lib/life-os";
 import { createEmptyWorkspace } from "@/lib/offline-workspace";
 
 describe("Marco Life OS", () => {
@@ -13,6 +13,8 @@ describe("Marco Life OS", () => {
     expect(workspace.gamification.perfectDays).toEqual(["2026-08-27"]);
     expect(currentStreak(workspace, new Date("2026-08-27T12:00:00"))).toBe(1);
     expect(levelFromXp(500)).toBe(3);
+    expect(bestStreak(["2026-08-20", "2026-08-21", "2026-08-23"])).toBe(2);
+    expect(achievementProgress(workspace).find(({ id }) => id === "first-step")).toMatchObject({ unlocked: true, progress: 100 });
   });
 
   it("membatasi prioritas harian menjadi tiga", () => {
