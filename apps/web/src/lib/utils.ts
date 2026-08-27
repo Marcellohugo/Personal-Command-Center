@@ -6,10 +6,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(amount: number) {
+export function formatCurrency(amount: number, currency = "IDR") {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
-    currency: "IDR",
+    currency,
     maximumFractionDigits: 0
   }).format(amount);
 }

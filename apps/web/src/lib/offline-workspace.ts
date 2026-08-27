@@ -3,6 +3,21 @@ export const LEGACY_WORKSPACE_STORAGE_KEY = "personal-command-center-workspace-v
 export const WORKSPACE_SYNC_KEY = "personal-command-center-sync-v1";
 export const WORKSPACE_GENERATION_KEY = "marco-life-os-generation-v1";
 
+export type WorkspaceAttachment = {
+  id: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  createdAt: string;
+  dataUrl?: string;
+  url?: string;
+  extractedText?: string;
+};
+
+export type WorkspaceEntityType = "note" | "schedule" | "transaction" | "savingGoal" | "growthGoal" | "habit" | "ticket" | "project";
+export type WorkspaceEntityLink = { type: WorkspaceEntityType; id: string };
+export type NoteVersion = { id: string; title: string; content: string; updatedAt: string };
+
 export type Note = {
   id: string;
   title: string;
@@ -12,6 +27,32 @@ export type Note = {
   folder?: string;
   tags?: string[];
   linkedScheduleId?: string;
+  status?: "active" | "archived" | "trashed";
+  deletedAt?: string;
+  journalDate?: string;
+  templateId?: string;
+  reminderAt?: string;
+  versions?: NoteVersion[];
+  attachments?: WorkspaceAttachment[];
+  links?: WorkspaceEntityLink[];
+};
+
+export type NoteTemplate = {
+  id: string;
+  name: string;
+  title: string;
+  content: string;
+  folder?: string;
+  tags?: string[];
+};
+
+export type SavedNoteSearch = {
+  id: string;
+  name: string;
+  query: string;
+  folder?: string;
+  tag?: string;
+  status?: "active" | "archived" | "trashed";
 };
 
 export type WorkspaceHabit = {
@@ -40,6 +81,15 @@ export type MoneySource = {
   dueDate?: string;
   installmentAmount?: number;
   paymentSourceId?: string;
+  institution?: string;
+  accountLast4?: string;
+  currency?: string;
+  openingBalance?: number;
+  annualInterestRate?: number;
+  minimumPayment?: number;
+  originalPrincipal?: number;
+  termMonths?: number;
+  statementDay?: number;
 };
 
 export type GoalMovement = {
@@ -82,7 +132,19 @@ export type CategoryGroup = {
   name: string;
   kind: "expense" | "income";
   monthlyBudget?: number;
+  keywords?: string[];
 };
+
+export type BudgetPlan = {
+  id: string;
+  month: string;
+  categoryId: string;
+  planned: number;
+  rollover?: number;
+  note?: string;
+};
+
+export type TransactionSplit = { id: string; amount: number; categoryId?: string; note?: string };
 
 export type Transaction = {
   id: string;
@@ -98,6 +160,47 @@ export type Transaction = {
   recurringItemId?: string;
   goalMovementId?: string;
   createdAt: string;
+  updatedAt?: string;
+  payee?: string;
+  status?: "pending" | "cleared" | "reconciled";
+  externalId?: string;
+  clearedAt?: string;
+  reconciledAt?: string;
+  linkedNoteId?: string;
+  splits?: TransactionSplit[];
+  receiptAttachments?: WorkspaceAttachment[];
+};
+
+export type InvestmentHolding = {
+  id: string;
+  name: string;
+  symbol?: string;
+  kind: "stock" | "fund" | "crypto" | "bond" | "gold" | "other";
+  sourceId?: string;
+  units: number;
+  costBasis: number;
+  currentPrice: number;
+  dividends?: number;
+  updatedAt: string;
+};
+
+export type ReconciliationRecord = {
+  id: string;
+  sourceId: string;
+  statementDate: string;
+  statementBalance: number;
+  workspaceBalance: number;
+  difference: number;
+  note?: string;
+  createdAt: string;
+};
+
+export type FinancialAuditEntry = {
+  id: string;
+  action: "create" | "update" | "delete" | "import" | "reconcile" | "lock" | "unlock";
+  entityId: string;
+  summary: string;
+  occurredAt: string;
 };
 
 export type WorkspaceSchedule = {
@@ -126,6 +229,10 @@ export type WorkspaceSettings = {
   eveningReminder?: string;
   weeklyReviewReminder?: string;
   timezone?: string;
+  defaultCurrency: string;
+  budgetMethod: "category" | "envelope" | "zero_based";
+  budgetRollover: boolean;
+  lockedFinanceMonths: string[];
 };
 
 export type GrowthArea = "career" | "learning" | "health" | "finance" | "personal";
@@ -266,12 +373,18 @@ export type OfflineWorkspace = {
   version: 4 | 5;
   updatedAt: string;
   notes: Note[];
+  noteTemplates: NoteTemplate[];
+  savedNoteSearches: SavedNoteSearch[];
   habits: WorkspaceHabit[];
   moneySources: MoneySource[];
   savingGoals: SavingGoal[];
   recurringItems: RecurringItem[];
   categoryGroups: CategoryGroup[];
   transactions: Transaction[];
+  budgetPlans: BudgetPlan[];
+  investments: InvestmentHolding[];
+  reconciliations: ReconciliationRecord[];
+  financialAudit: FinancialAuditEntry[];
   schedules: WorkspaceSchedule[];
   growthGoals: GrowthGoal[];
   focusSessions: FocusSession[];
@@ -310,12 +423,18 @@ export function createEmptyWorkspace(): OfflineWorkspace {
     version: 5,
     updatedAt: new Date(0).toISOString(),
     notes: [],
+    noteTemplates: [],
+    savedNoteSearches: [],
     habits: [],
     moneySources: [],
     savingGoals: [],
     recurringItems: [],
     categoryGroups: [],
     transactions: [],
+    budgetPlans: [],
+    investments: [],
+    reconciliations: [],
+    financialAudit: [],
     schedules: [],
     growthGoals: [],
     focusSessions: [],
@@ -346,7 +465,11 @@ export function createEmptyWorkspace(): OfflineWorkspace {
       hideBalances: false,
       notificationsEnabled: false,
       deletedGoogleEventIds: [],
-      timezone: "Asia/Bangkok"
+      timezone: "Asia/Bangkok",
+      defaultCurrency: "IDR",
+      budgetMethod: "category",
+      budgetRollover: false,
+      lockedFinanceMonths: []
     }
   };
 }
@@ -375,6 +498,38 @@ function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback
   return typeof value === "string" && allowed.includes(value as T) ? value as T : fallback;
 }
 
+function normalizeAttachments(value: unknown): WorkspaceAttachment[] {
+  return rows(value)
+    .filter((item) => text(item.id) && text(item.name) && date(item.createdAt))
+    .slice(0, 4)
+    .map((item) => {
+      const dataUrl = text(item.dataUrl);
+      return {
+        id: text(item.id).slice(0, 128),
+        name: text(item.name).slice(0, 180),
+        mimeType: text(item.mimeType, "application/octet-stream").slice(0, 100),
+        size: Math.max(0, Math.min(180_000, Math.round(number(item.size)))),
+        createdAt: date(item.createdAt),
+        dataUrl: dataUrl.length <= 180_000 ? dataUrl || undefined : undefined,
+        url: /^https?:\/\//i.test(text(item.url)) ? text(item.url).slice(0, 2048) : undefined,
+        extractedText: text(item.extractedText).slice(0, 20_000) || undefined
+      };
+    });
+}
+
+function normalizeLinks(value: unknown): WorkspaceEntityLink[] {
+  const allowed = ["note", "schedule", "transaction", "savingGoal", "growthGoal", "habit", "ticket", "project"] as const;
+  const seen = new Set<string>();
+  return rows(value).flatMap((item) => {
+    const type = oneOf(item.type, allowed, "note");
+    const id = text(item.id).slice(0, 128);
+    const key = `${type}:${id}`;
+    if (!id || seen.has(key)) return [];
+    seen.add(key);
+    return [{ type, id }];
+  }).slice(0, 50);
+}
+
 function normalizeWorkspace(value: Record<string, unknown>): OfflineWorkspace {
   const empty = createEmptyWorkspace();
   const settings = isRecord(value.settings) ? value.settings : {};
@@ -393,7 +548,42 @@ function normalizeWorkspace(value: Record<string, unknown>): OfflineWorkspace {
         updatedAt: date(item.updatedAt),
         folder: text(item.folder),
         tags: Array.isArray(item.tags) ? item.tags.filter((tag): tag is string => typeof tag === "string") : [],
-        linkedScheduleId: text(item.linkedScheduleId)
+        linkedScheduleId: text(item.linkedScheduleId),
+        status: oneOf(item.status, ["active", "archived", "trashed"] as const, "active"),
+        deletedAt: date(item.deletedAt) || undefined,
+        journalDate: /^\d{4}-\d{2}-\d{2}$/.test(text(item.journalDate)) ? text(item.journalDate) : undefined,
+        templateId: text(item.templateId).slice(0, 128) || undefined,
+        reminderAt: date(item.reminderAt) || undefined,
+        versions: rows(item.versions).filter((version) => text(version.id) && date(version.updatedAt)).slice(-20).map((version) => ({
+          id: text(version.id).slice(0, 128),
+          title: text(version.title).slice(0, 120),
+          content: text(version.content).slice(0, 200_000),
+          updatedAt: date(version.updatedAt)
+        })),
+        attachments: normalizeAttachments(item.attachments),
+        links: normalizeLinks(item.links)
+      })),
+    noteTemplates: rows(value.noteTemplates)
+      .filter((item) => text(item.id) && text(item.name))
+      .slice(0, 100)
+      .map((item) => ({
+        id: text(item.id).slice(0, 128),
+        name: text(item.name).slice(0, 80),
+        title: text(item.title).slice(0, 120),
+        content: text(item.content).slice(0, 200_000),
+        folder: text(item.folder).slice(0, 80) || undefined,
+        tags: Array.isArray(item.tags) ? Array.from(new Set(item.tags.filter((tag): tag is string => typeof tag === "string" && Boolean(tag.trim())).map((tag) => tag.trim().slice(0, 40)))).slice(0, 20) : []
+      })),
+    savedNoteSearches: rows(value.savedNoteSearches)
+      .filter((item) => text(item.id) && text(item.name))
+      .slice(0, 50)
+      .map((item) => ({
+        id: text(item.id).slice(0, 128),
+        name: text(item.name).slice(0, 80),
+        query: text(item.query).slice(0, 200),
+        folder: text(item.folder).slice(0, 80) || undefined,
+        tag: text(item.tag).slice(0, 40) || undefined,
+        status: oneOf(item.status, ["active", "archived", "trashed"] as const, "active")
       })),
     habits: rows(value.habits)
       .filter((item) => text(item.id) && text(item.name))
@@ -416,7 +606,16 @@ function normalizeWorkspace(value: Record<string, unknown>): OfflineWorkspace {
         balance: number(item.balance),
         dueDate: date(item.dueDate),
         installmentAmount: number(item.installmentAmount),
-        paymentSourceId: text(item.paymentSourceId)
+        paymentSourceId: text(item.paymentSourceId),
+        institution: text(item.institution).slice(0, 100) || undefined,
+        accountLast4: /^\d{2,4}$/.test(text(item.accountLast4)) ? text(item.accountLast4) : undefined,
+        currency: /^[A-Z]{3}$/.test(text(item.currency)) ? text(item.currency) : "IDR",
+        openingBalance: number(item.openingBalance),
+        annualInterestRate: Math.max(0, Math.min(100, number(item.annualInterestRate))),
+        minimumPayment: Math.max(0, number(item.minimumPayment)),
+        originalPrincipal: Math.max(0, number(item.originalPrincipal)),
+        termMonths: Math.max(0, Math.min(1200, Math.round(number(item.termMonths)))),
+        statementDay: Math.max(0, Math.min(31, Math.round(number(item.statementDay)))) || undefined
       })),
     savingGoals: rows(value.savingGoals)
       .filter((item) => text(item.id) && text(item.name))
@@ -459,7 +658,8 @@ function normalizeWorkspace(value: Record<string, unknown>): OfflineWorkspace {
         id: text(item.id),
         name: text(item.name),
         kind: oneOf(item.kind, ["expense", "income"], "expense"),
-        monthlyBudget: number(item.monthlyBudget)
+        monthlyBudget: number(item.monthlyBudget),
+        keywords: Array.isArray(item.keywords) ? Array.from(new Set(item.keywords.filter((keyword): keyword is string => typeof keyword === "string" && Boolean(keyword.trim())).map((keyword) => keyword.trim().toLocaleLowerCase("id-ID").slice(0, 50)))).slice(0, 30) : []
       })),
     transactions: rows(value.transactions)
       .filter((item) => text(item.id) && date(item.date) && number(item.amount) > 0)
@@ -476,7 +676,70 @@ function normalizeWorkspace(value: Record<string, unknown>): OfflineWorkspace {
         note: text(item.note),
         recurringItemId: text(item.recurringItemId),
         goalMovementId: text(item.goalMovementId),
+        createdAt: date(item.createdAt, new Date().toISOString()),
+        updatedAt: date(item.updatedAt, date(item.createdAt, new Date().toISOString())),
+        payee: text(item.payee).slice(0, 160) || undefined,
+        status: oneOf(item.status, ["pending", "cleared", "reconciled"] as const, "cleared"),
+        externalId: text(item.externalId).slice(0, 200) || undefined,
+        clearedAt: date(item.clearedAt) || undefined,
+        reconciledAt: date(item.reconciledAt) || undefined,
+        linkedNoteId: text(item.linkedNoteId).slice(0, 128) || undefined,
+        splits: rows(item.splits).filter((split) => text(split.id) && number(split.amount) > 0).slice(0, 20).map((split) => ({
+          id: text(split.id).slice(0, 128),
+          amount: number(split.amount),
+          categoryId: text(split.categoryId).slice(0, 128) || undefined,
+          note: text(split.note).slice(0, 160) || undefined
+        })),
+        receiptAttachments: normalizeAttachments(item.receiptAttachments)
+      })),
+    budgetPlans: rows(value.budgetPlans)
+      .filter((item) => text(item.id) && /^\d{4}-\d{2}$/.test(text(item.month)) && text(item.categoryId))
+      .slice(0, 5000)
+      .map((item) => ({
+        id: text(item.id).slice(0, 128),
+        month: text(item.month),
+        categoryId: text(item.categoryId).slice(0, 128),
+        planned: Math.max(0, number(item.planned)),
+        rollover: number(item.rollover),
+        note: text(item.note).slice(0, 240) || undefined
+      })),
+    investments: rows(value.investments)
+      .filter((item) => text(item.id) && text(item.name))
+      .slice(0, 1000)
+      .map((item) => ({
+        id: text(item.id).slice(0, 128),
+        name: text(item.name).slice(0, 120),
+        symbol: text(item.symbol).slice(0, 24).toUpperCase() || undefined,
+        kind: oneOf(item.kind, ["stock", "fund", "crypto", "bond", "gold", "other"] as const, "other"),
+        sourceId: text(item.sourceId).slice(0, 128) || undefined,
+        units: Math.max(0, number(item.units)),
+        costBasis: Math.max(0, number(item.costBasis)),
+        currentPrice: Math.max(0, number(item.currentPrice)),
+        dividends: Math.max(0, number(item.dividends)),
+        updatedAt: date(item.updatedAt, new Date().toISOString())
+      })),
+    reconciliations: rows(value.reconciliations)
+      .filter((item) => text(item.id) && text(item.sourceId) && date(item.statementDate))
+      .slice(0, 2000)
+      .map((item) => ({
+        id: text(item.id).slice(0, 128),
+        sourceId: text(item.sourceId).slice(0, 128),
+        statementDate: date(item.statementDate),
+        statementBalance: number(item.statementBalance),
+        workspaceBalance: number(item.workspaceBalance),
+        difference: number(item.difference),
+        note: text(item.note).slice(0, 240) || undefined,
         createdAt: date(item.createdAt, new Date().toISOString())
+      })),
+    financialAudit: rows(value.financialAudit)
+      .filter((item) => text(item.id) && text(item.entityId) && date(item.occurredAt))
+      .slice(0, 5000)
+      .map((item) => ({
+        id: text(item.id).slice(0, 128),
+        action: oneOf(item.action, ["create", "update", "delete", "import", "reconcile", "lock", "unlock"] as const, "update"),
+        entityId: text(item.entityId).slice(0, 128),
+        summary: text(item.summary).slice(0, 240),
+        occurredAt: date(item.occurredAt)
       })),
     schedules: rows(value.schedules)
       .filter((item) => text(item.id) && text(item.title) && date(item.date) && text(item.startTime))
@@ -641,7 +904,13 @@ function normalizeWorkspace(value: Record<string, unknown>): OfflineWorkspace {
       morningReminder: text(settings.morningReminder),
       eveningReminder: text(settings.eveningReminder),
       weeklyReviewReminder: text(settings.weeklyReviewReminder),
-      timezone: text(settings.timezone, "Asia/Bangkok")
+      timezone: text(settings.timezone, "Asia/Bangkok"),
+      defaultCurrency: /^[A-Z]{3}$/.test(text(settings.defaultCurrency)) ? text(settings.defaultCurrency) : "IDR",
+      budgetMethod: oneOf(settings.budgetMethod, ["category", "envelope", "zero_based"] as const, "category"),
+      budgetRollover: settings.budgetRollover === true,
+      lockedFinanceMonths: Array.isArray(settings.lockedFinanceMonths)
+        ? Array.from(new Set(settings.lockedFinanceMonths.filter((month): month is string => typeof month === "string" && /^\d{4}-\d{2}$/.test(month))).values()).sort().slice(-120)
+        : []
     }
   };
 }

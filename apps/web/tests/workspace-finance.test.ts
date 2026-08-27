@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createEmptyWorkspace, type Transaction } from "@/lib/offline-workspace";
-import { advanceRecurringDate, moveGoalFunds, putTransaction, removeTransaction, runWorkspaceAutomation } from "@/lib/workspace-finance";
+import { advanceRecurringDate, applyReconciliation, moveGoalFunds, putTransaction, removeTransaction, runWorkspaceAutomation, setFinanceMonthLock } from "@/lib/workspace-finance";
 
 describe("workspace finance", () => {
   it("memperbarui saldo dan menjalankan transaksi berkala jatuh tempo", () => {
@@ -69,5 +69,18 @@ describe("workspace finance", () => {
     const saved = moveGoalFunds(workspace, "goal", "deposit", 20_000, "cash", "2026-07-19");
     expect(saved.moneySources[0].balance).toBe(80_000);
     expect(saved.savingGoals[0].saved).toBe(20_000);
+  });
+
+  it("merekonsiliasi saldo dan menolak perubahan periode terkunci", () => {
+    const workspace = { ...createEmptyWorkspace(), moneySources: [{ id: "cash", name: "Bank", type: "deposit_card" as const, balance: 100_000 }], transactions: [{ id: "cleared", kind: "expense" as const, amount: 5_000, date: "2026-08-20", sourceId: "cash", note: "Belanja", status: "cleared" as const, createdAt: "2026-08-20T00:00:00Z" }] };
+    const reconciled = applyReconciliation(workspace, "cash", "2026-08-31", 110_000, "Mutasi bank");
+    expect(reconciled.moneySources[0].balance).toBe(110_000);
+    expect(reconciled.reconciliations[0].difference).toBe(10_000);
+    expect(reconciled.transactions[0].status).toBe("reconciled");
+    const locked = setFinanceMonthLock(reconciled, "2026-08", true);
+    const unchanged = putTransaction(locked, { id: "late", kind: "expense", amount: 5_000, date: "2026-08-20", sourceId: "cash", note: "Terlambat", createdAt: "2026-08-20T00:00:00Z" });
+    expect(unchanged.transactions).toHaveLength(1);
+    const moved = putTransaction(locked, { ...locked.transactions[0], date: "2026-09-01" }, locked.transactions[0]);
+    expect(moved.transactions[0].date).toBe("2026-08-20");
   });
 });

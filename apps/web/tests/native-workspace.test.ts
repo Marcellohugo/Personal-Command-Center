@@ -61,4 +61,21 @@ describe("native workspace sync", () => {
     expect(normalizeNativeWorkspace({ version: 2, transactions: [], agenda: [], notes: [], habits: [] })).not.toBeNull();
     expect(normalizeNativeWorkspace({ version: 2, transactions: [{ id: "x" }], agenda: [], notes: [], habits: [] })).toBeNull();
   });
+
+  it("mempertahankan arsip note dan transaksi pada periode terkunci", () => {
+    const web = createEmptyWorkspace();
+    web.settings.lockedFinanceMonths = ["2026-08"];
+    web.notes = [
+      { id: "active", title: "Aktif", content: "A", pinned: false, status: "active", updatedAt: "2026-08-27T00:00:00Z" },
+      { id: "archive", title: "Arsip", content: "B", pinned: false, status: "archived", updatedAt: "2026-08-27T00:00:00Z" }
+    ];
+    web.transactions = [{ id: "locked", kind: "expense", amount: 100, date: "2026-08-20", sourceId: "cash", note: "Asli", createdAt: "2026-08-20T00:00:00Z" }];
+    const native = nativeFromWorkspace(web);
+    expect(native.notes.map(({ id }) => id)).toEqual(["active"]);
+    native.transactions[0].title = "Diubah desktop";
+    native.transactions[0].amount = 999;
+    const merged = mergeNativeWorkspace(native, web);
+    expect(merged.notes.find(({ id }) => id === "archive")?.status).toBe("archived");
+    expect(merged.transactions[0]).toMatchObject({ id: "locked", amount: 100, note: "Asli" });
+  });
 });

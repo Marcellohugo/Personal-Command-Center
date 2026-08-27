@@ -5,25 +5,18 @@ import {
   Banknote,
   CalendarDays,
   CalendarClock,
-  ChevronDown,
   ClipboardCheck,
   CreditCard,
   Flame,
   LayoutDashboard,
-  List,
-  ListChecks,
-  ListOrdered,
   LockKeyhole,
   NotebookPen,
   PanelsTopLeft,
   Pencil,
   PiggyBank,
-  Pin,
-  PinOff,
   Plus,
   ReceiptText,
   Search,
-  SendHorizontal,
   Settings,
   Sparkles,
   Tags,
@@ -35,7 +28,7 @@ import {
   WifiOff,
   X
 } from "lucide-react";
-import { Fragment, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import {
   LEGACY_WORKSPACE_STORAGE_KEY,
@@ -49,7 +42,6 @@ import {
   upsertById,
   type CategoryGroup,
   type MoneySource,
-  type Note,
   type OfflineWorkspace,
   type RecurringItem,
   type SavingGoal,
@@ -57,7 +49,8 @@ import {
 } from "@/lib/offline-workspace";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { AgendaPanel } from "@/components/command-center/agenda-panel";
-import { TransactionsPanel } from "@/components/command-center/transactions-panel";
+import { FinanceCenter } from "@/components/command-center/finance-center";
+import { NotesCenter } from "@/components/command-center/notes-center";
 import { WorkspaceSettings } from "@/components/command-center/workspace-settings";
 import { GlobalSearch } from "@/components/command-center/global-search";
 import { WorkspaceHabits } from "@/components/command-center/workspace-habits";
@@ -67,7 +60,6 @@ import { LifeOsPanel } from "@/components/command-center/life-os-panel";
 import { QuickCapture } from "@/components/command-center/quick-capture";
 import { cn, formatCurrency } from "@/lib/utils";
 import { advanceRecurringDate, moveGoalFunds, putTransaction, runWorkspaceAutomation } from "@/lib/workspace-finance";
-import { formatNoteList, splitQuickNote, type NoteListStyle } from "@/lib/notes";
 import { dailyMotivation } from "@/lib/growth";
 
 type WorkspaceSection = "overview" | "notes" | "sources" | "goals" | "recurring" | "categories";
@@ -152,7 +144,6 @@ export function CommandCenter() {
   const [active, setActive] = useState<Section>("overview");
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
   const syncRequest = useRef<AbortController | null>(null);
   const workspaceRef = useRef(workspace);
@@ -305,6 +296,15 @@ export function CommandCenter() {
         new Notification(`Tagihan: ${recurring.name}`, { body: `Jatuh tempo ${recurring.nextDate}` });
         sessionStorage.setItem(key, "1");
       }
+      for (const note of workspace.notes) {
+        if (!note.reminderAt || (note.status ?? "active") !== "active") continue;
+        const reminder = new Date(note.reminderAt);
+        if (Number.isNaN(reminder.getTime()) || reminder > now) continue;
+        const key = `note:${note.id}:${note.reminderAt}`;
+        if (sessionStorage.getItem(key)) continue;
+        new Notification(`Note: ${note.title}`, { body: note.content.slice(0, 120) || "Pengingat catatan" });
+        sessionStorage.setItem(key, "1");
+      }
       const nowValue = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
       const ritualReminders = [
         [workspace.settings.morningReminder, "Ritual pagi", "Tentukan energi dan tiga prioritasmu."],
@@ -322,7 +322,7 @@ export function CommandCenter() {
     check();
     const timer = window.setInterval(check, 30_000);
     return () => window.clearInterval(timer);
-  }, [hydrated, workspace.recurringItems, workspace.schedules, workspace.settings.eveningReminder, workspace.settings.morningReminder, workspace.settings.notificationsEnabled, workspace.settings.weeklyReviewReminder]);
+  }, [hydrated, workspace.notes, workspace.recurringItems, workspace.schedules, workspace.settings.eveningReminder, workspace.settings.morningReminder, workspace.settings.notificationsEnabled, workspace.settings.weeklyReviewReminder]);
 
   function updateWorkspace(updater: (current: OfflineWorkspace) => OfflineWorkspace) {
     setWorkspace((current) => touchWorkspace(updater(current)));
@@ -420,14 +420,7 @@ export function CommandCenter() {
 
   const motivation = useMemo(() => dailyMotivation(workspace), [workspace]);
 
-  const displayMoney = (value: number) => workspace.settings.hideBalances ? "••••••" : formatCurrency(value);
-
-  const visibleNotes = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase("id-ID");
-    return [...workspace.notes]
-      .filter((note) => !query || `${note.title} ${note.content} ${(note.tags ?? []).join(" ")} ${note.folder ?? ""}`.toLocaleLowerCase("id-ID").includes(query))
-      .sort((a, b) => a.updatedAt.localeCompare(b.updatedAt));
-  }, [search, workspace.notes]);
+  const displayMoney = (value: number) => workspace.settings.hideBalances ? "••••••" : formatCurrency(value, workspace.settings.defaultCurrency);
 
   function changeSection(section: Section) {
     setActive(section);
@@ -482,42 +475,6 @@ export function CommandCenter() {
     });
   }
 
-  function saveNote(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const data = new FormData(event.currentTarget);
-    const previous = workspace.notes.find(({ id }) => id === editingId);
-    const note: Note = {
-      id: previous?.id ?? nextId(),
-      title: String(data.get("title")).trim(),
-      content: String(data.get("content")).trim(),
-      pinned: previous?.pinned ?? false,
-      updatedAt: new Date().toISOString(),
-      folder: String(data.get("folder") || "").trim(),
-      tags: String(data.get("tags") || "").split(",").map((tag) => tag.trim()).filter(Boolean),
-      linkedScheduleId: previous?.linkedScheduleId
-    };
-    updateWorkspace((current) => ({ ...current, notes: upsertById(current.notes, note) }));
-    closeForm();
-  }
-
-  function quickSaveNote(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const value = splitQuickNote(String(new FormData(form).get("quickNote") || ""));
-    if (!value) return;
-    const note: Note = {
-      id: nextId(),
-      title: value.title,
-      content: value.content,
-      pinned: false,
-      updatedAt: new Date().toISOString(),
-      folder: "",
-      tags: []
-    };
-    updateWorkspace((current) => ({ ...current, notes: upsertById(current.notes, note) }));
-    form.reset();
-  }
-
   function saveSource(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -528,7 +485,16 @@ export function CommandCenter() {
       balance: numberValue(data, "balance"),
       dueDate: String(data.get("dueDate") || "") || undefined,
       installmentAmount: numberValue(data, "installmentAmount") || undefined,
-      paymentSourceId: String(data.get("paymentSourceId") || "") || undefined
+      paymentSourceId: String(data.get("paymentSourceId") || "") || undefined,
+      institution: String(data.get("institution") || "").trim() || undefined,
+      accountLast4: String(data.get("accountLast4") || "").trim() || undefined,
+      currency: String(data.get("currency") || "IDR").trim().toUpperCase(),
+      openingBalance: numberValue(data, "openingBalance") || undefined,
+      annualInterestRate: numberValue(data, "annualInterestRate") || undefined,
+      minimumPayment: numberValue(data, "minimumPayment") || undefined,
+      originalPrincipal: numberValue(data, "originalPrincipal") || undefined,
+      termMonths: numberValue(data, "termMonths") || undefined,
+      statementDay: numberValue(data, "statementDay") || undefined
     };
     updateWorkspace((current) => {
       const moneySources = upsertById(current.moneySources, source);
@@ -599,7 +565,8 @@ export function CommandCenter() {
       id: editingId ?? nextId(),
       name: String(data.get("name")).trim(),
       kind: data.get("kind") as CategoryGroup["kind"],
-      monthlyBudget: numberValue(data, "monthlyBudget") || undefined
+      monthlyBudget: numberValue(data, "monthlyBudget") || undefined,
+      keywords: String(data.get("keywords") || "").split(",").map((keyword) => keyword.trim()).filter(Boolean)
     };
     updateWorkspace((current) => ({ ...current, categoryGroups: upsertById(current.categoryGroups, category) }));
     closeForm();
@@ -629,7 +596,6 @@ export function CommandCenter() {
     });
   }
 
-  const editingNote = workspace.notes.find(({ id }) => id === editingId);
   const editingSource = workspace.moneySources.find(({ id }) => id === editingId);
   const editingGoal = workspace.savingGoals.find(({ id }) => id === editingId);
   const editingRecurring = workspace.recurringItems.find(({ id }) => id === editingId);
@@ -758,65 +724,7 @@ export function CommandCenter() {
           </div>
         ) : null}
 
-        {active === "notes" ? (
-          <section className="grid gap-4">
-            {formOpen ? (
-              <Editor title={editingNote ? "Ubah note" : "Note baru"} onClose={closeForm}>
-                <form className="grid gap-4" onSubmit={saveNote} key={editingNote?.id ?? "new-note"}>
-                  <Field label="Judul" name="title" defaultValue={editingNote?.title} placeholder="Contoh: Ide minggu ini" maxLength={120} />
-                  <div className="grid gap-4 sm:grid-cols-2"><Field label="Folder" name="folder" defaultValue={editingNote?.folder} placeholder="Pribadi, kerja…" maxLength={40} required={false} /><Field label="Tag" name="tags" defaultValue={editingNote?.tags?.join(", ")} placeholder="penting, ide" maxLength={120} required={false} /></div>
-                  <NoteEditorField defaultValue={editingNote?.content} />
-                  <FormActions editing={Boolean(editingNote)} onCancel={closeForm} />
-                </form>
-              </Editor>
-            ) : null}
-            <div className="notes-chat overflow-hidden rounded-2xl border border-ink/10 shadow-panel dark:border-white/10">
-              <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-ink/10 bg-[#edf4ff]/95 p-3 backdrop-blur dark:border-white/10 dark:bg-[#0b1f3a]/95">
-                <Search className="ml-1 h-4 w-4 text-ink/40 dark:text-paper/40" aria-hidden="true" />
-                <label htmlFor="note-search" className="sr-only">Cari notes</label>
-                <input id="note-search" type="search" className="min-w-0 flex-1 bg-transparent text-sm outline-none" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Cari judul atau isi note…" />
-                <button type="button" className="button-secondary h-9 shrink-0 px-3" onClick={() => openCreate("notes")}><Plus className="h-4 w-4" /><span className="hidden sm:inline">Detail</span></button>
-              </div>
-
-              <div className="grid min-h-[52vh] content-end gap-3 p-3 sm:p-5">
-                {visibleNotes.map((note, index) => {
-                  const showDate = index === 0 || noteDayKey(visibleNotes[index - 1].updatedAt) !== noteDayKey(note.updatedAt);
-                  return (
-                    <Fragment key={note.id}>
-                      {showDate ? <div className="my-1 flex justify-center"><span className="rounded-lg bg-ink/70 px-3 py-1 text-xs font-bold text-white shadow-sm dark:bg-black/45">{noteDateLabel(note.updatedAt)}</span></div> : null}
-                      <article className={cn("note-bubble relative ml-auto w-fit min-w-52 max-w-[92%] rounded-xl rounded-tr-sm px-4 pb-2 pt-3 shadow-sm sm:max-w-[78%]", note.pinned && "ring-2 ring-amber-400/60")}>
-                        <div className="flex items-start gap-3">
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">{note.pinned ? <Pin className="h-3.5 w-3.5 shrink-0 text-amber-700" /> : null}<h2 className="break-words text-[15px] font-black sm:text-base">{note.title}</h2></div>
-                            {note.folder || (note.tags ?? []).length > 0 ? <p className="mt-1 text-[11px] font-semibold text-[#2359a8] dark:text-blue-100/70">{note.folder ? note.folder : ""}{note.folder && note.tags?.length ? " · " : ""}{note.tags?.map((tag) => `#${tag}`).join(" ")}</p> : null}
-                          </div>
-                          <details className="group relative shrink-0">
-                            <summary className="grid h-7 w-7 cursor-pointer list-none place-items-center rounded-full text-[#2359a8] hover:bg-black/5 dark:text-blue-100/70 dark:hover:bg-white/10" aria-label={`Aksi untuk ${note.title}`}><ChevronDown className="h-4 w-4 transition group-open:rotate-180" /></summary>
-                            <div className="absolute right-0 top-8 z-20 grid min-w-36 overflow-hidden rounded-xl border border-black/10 bg-white py-1 text-sm text-ink shadow-panel">
-                              <button type="button" className="flex items-center gap-2 px-3 py-2 text-left hover:bg-ink/5" onClick={() => updateWorkspace((current) => ({ ...current, notes: current.notes.map((item) => item.id === note.id ? { ...item, pinned: !item.pinned, updatedAt: new Date().toISOString() } : item) }))}>{note.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}{note.pinned ? "Lepas sematan" : "Sematkan"}</button>
-                              <button type="button" className="flex items-center gap-2 px-3 py-2 text-left hover:bg-ink/5" onClick={() => openEdit("notes", note.id)}><Pencil className="h-4 w-4" />Ubah</button>
-                              <button type="button" className="flex items-center gap-2 px-3 py-2 text-left text-red-700 hover:bg-red-50" onClick={() => remove("notes", note.id, note.title)}><Trash2 className="h-4 w-4" />Hapus</button>
-                            </div>
-                          </details>
-                        </div>
-                        <NoteContent note={note} onToggleChecklist={(line) => updateWorkspace((current) => ({ ...current, notes: current.notes.map((item) => item.id === note.id ? { ...item, content: toggleChecklistLine(item.content, line), updatedAt: new Date().toISOString() } : item) }))} />
-                        <p className="mt-2 flex items-center justify-end gap-1 text-[10px] font-semibold text-[#5274a3] dark:text-blue-100/60"><span>{noteTimeLabel(note.updatedAt)}</span><span className="text-sky-600 dark:text-cyan-300" aria-label="Tersimpan">✓✓</span></p>
-                      </article>
-                    </Fragment>
-                  );
-                })}
-                {visibleNotes.length === 0 ? <div className="grid min-h-52 place-items-center text-center"><div><NotebookPen className="mx-auto h-7 w-7 text-moss" /><p className="mt-3 text-sm font-semibold text-ink/55 dark:text-paper/60">{search ? "Tidak ada note yang cocok." : "Belum ada note. Tulis pesan pertama di bawah."}</p></div></div> : null}
-              </div>
-
-              <form className="sticky bottom-0 z-10 flex items-end gap-2 border-t border-ink/10 bg-[#edf4ff]/95 p-3 backdrop-blur dark:border-white/10 dark:bg-[#0b1f3a]/95" onSubmit={quickSaveNote}>
-                <button type="button" className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink/60 transition hover:bg-ink/5 dark:text-paper/60 dark:hover:bg-white/5" onClick={() => openCreate("notes")} aria-label="Buka form note lengkap"><Plus className="h-6 w-6" /></button>
-                <label htmlFor="quick-note" className="sr-only">Tulis note</label>
-                <textarea id="quick-note" name="quickNote" className="max-h-40 min-h-11 min-w-0 flex-1 resize-y rounded-2xl border border-line bg-white px-4 py-2.5 text-sm leading-6 text-ink outline-none focus:border-moss dark:border-white/10 dark:bg-white/10 dark:text-paper" rows={1} maxLength={20000} placeholder="Tulis note… Baris pertama menjadi judul" />
-                <button type="submit" className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-moss text-white transition hover:bg-blue-700" aria-label="Simpan note"><SendHorizontal className="h-5 w-5" /></button>
-              </form>
-            </div>
-          </section>
-        ) : null}
+        {active === "notes" ? <NotesCenter workspace={workspace} updateWorkspace={updateWorkspace} /> : null}
 
         {active === "sources" ? (
           <section className="grid gap-4">
@@ -826,8 +734,17 @@ export function CommandCenter() {
                   <Field label="Nama sumber" name="name" defaultValue={editingSource?.name} placeholder="Contoh: GoPay utama" maxLength={80} />
                   <label className="grid gap-2"><span className="label">Jenis</span><select className="field" name="type" defaultValue={editingSource?.type ?? "cash"}>{moneySourceTypes.map((type) => <option key={type.value} value={type.value}>{type.label}</option>)}</select></label>
                   <Field label="Saldo / nilai" name="balance" type="number" defaultValue={editingSource?.balance} min={0} step={1000} placeholder="0" />
+                  <Field label="Institusi" name="institution" defaultValue={editingSource?.institution} placeholder="Bank / penyedia" maxLength={100} required={false} />
+                  <Field label="4 digit akun" name="accountLast4" defaultValue={editingSource?.accountLast4} placeholder="1234" maxLength={4} pattern="[0-9]{2,4}" required={false} />
+                  <Field label="Mata uang" name="currency" defaultValue={editingSource?.currency ?? workspace.settings.defaultCurrency} placeholder="IDR" maxLength={3} />
+                  <Field label="Saldo awal" name="openingBalance" type="number" defaultValue={editingSource?.openingBalance} step="any" placeholder="Opsional" required={false} />
                   <Field label="Jatuh tempo" name="dueDate" type="date" defaultValue={editingSource?.dueDate} />
                   <Field label="Cicilan / minimum bayar" name="installmentAmount" type="number" defaultValue={editingSource?.installmentAmount} min={0} step={1000} placeholder="Opsional" required={false} />
+                  <Field label="Bunga per tahun (%)" name="annualInterestRate" type="number" defaultValue={editingSource?.annualInterestRate} min={0} max={100} step="0.01" placeholder="Khusus utang" required={false} />
+                  <Field label="Minimum pembayaran" name="minimumPayment" type="number" defaultValue={editingSource?.minimumPayment} min={0} step={1000} placeholder="Khusus utang" required={false} />
+                  <Field label="Pokok awal" name="originalPrincipal" type="number" defaultValue={editingSource?.originalPrincipal} min={0} step={1000} placeholder="Khusus utang" required={false} />
+                  <Field label="Tenor (bulan)" name="termMonths" type="number" defaultValue={editingSource?.termMonths} min={0} max={1200} placeholder="Khusus utang" required={false} />
+                  <Field label="Tanggal cetak tagihan" name="statementDay" type="number" defaultValue={editingSource?.statementDay} min={1} max={31} placeholder="1–31" required={false} />
                   <label className="grid gap-2"><span className="label">Sumber pembayaran cicilan</span><select className="field" name="paymentSourceId" defaultValue={editingSource?.paymentSourceId ?? ""}><option value="">Tidak ada</option>{workspace.moneySources.filter(({ id }) => id !== editingSource?.id).map((source) => <option key={source.id} value={source.id}>{source.name}</option>)}</select></label>
                   <div className="self-end"><FormActions editing={Boolean(editingSource)} onCancel={closeForm} /></div>
                 </form>
@@ -930,6 +847,7 @@ export function CommandCenter() {
                   <Field label="Nama grup" name="name" defaultValue={editingCategory?.name} placeholder="Contoh: Kebutuhan rumah" maxLength={80} />
                   <label className="grid gap-2"><span className="label">Kategori utama</span><select className="field" name="kind" defaultValue={editingCategory?.kind ?? "expense"}><option value="expense">Pengeluaran</option><option value="income">Pemasukan</option></select></label>
                   <Field label="Anggaran bulanan" name="monthlyBudget" type="number" defaultValue={editingCategory?.monthlyBudget} min={0} step={100000} placeholder="Opsional" required={false} />
+                  <Field label="Kata kunci otomatis" name="keywords" defaultValue={editingCategory?.keywords?.join(", ")} placeholder="grab, gojek, bensin" maxLength={200} required={false} />
                   <div className="sm:col-span-2"><FormActions editing={Boolean(editingCategory)} onCancel={closeForm} /></div>
                 </form>
               </Editor>
@@ -954,7 +872,7 @@ export function CommandCenter() {
         ) : null}
 
         {active === "agenda" ? <AgendaPanel workspace={workspace} updateWorkspace={updateWorkspace} /> : null}
-        {active === "transaksi" ? <TransactionsPanel workspace={workspace} updateWorkspace={updateWorkspace} hideBalances={workspace.settings.hideBalances} /> : null}
+        {active === "transaksi" ? <FinanceCenter workspace={workspace} updateWorkspace={updateWorkspace} onNavigate={changeSection} /> : null}
         {active === "kebiasaan" ? <WorkspaceHabits workspace={workspace} updateWorkspace={updateWorkspace} /> : null}
         {active === "perkembangan" ? <GrowthCenter workspace={workspace} updateWorkspace={updateWorkspace} /> : null}
         {active === "proyek" ? <KanbanBoard workspace={workspace} updateWorkspace={updateWorkspace} /> : null}
@@ -1005,48 +923,4 @@ function EmptyLine({ text }: { text: string }) {
 
 function EmptyState({ icon: Icon, text, onCreate }: { icon: typeof NotebookPen; text: string; onCreate: () => void }) {
   return <div className="panel grid min-h-52 place-items-center rounded-xl p-6 text-center"><div><Icon className="mx-auto h-7 w-7 text-clay" /><p className="mx-auto mt-3 max-w-sm text-sm text-ink/55 dark:text-paper/50">{text}</p><button type="button" className="button-primary mt-4" onClick={onCreate}><Plus className="h-4 w-4" />Tambah sekarang</button></div></div>;
-}
-
-function toggleChecklistLine(content: string, lineNumber: number) {
-  return content.split("\n").map((line, index) => {
-    if (index !== lineNumber) return line;
-    return line.startsWith("☑ ") ? `☐ ${line.slice(2)}` : `☑ ${line.slice(2)}`;
-  }).join("\n");
-}
-
-function noteDayKey(value: string) {
-  const date = new Date(value);
-  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-}
-
-function noteDateLabel(value: string) {
-  const date = new Date(value);
-  const today = new Date();
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
-  if (noteDayKey(value) === noteDayKey(today.toISOString())) return "Hari ini";
-  if (noteDayKey(value) === noteDayKey(yesterday.toISOString())) return "Kemarin";
-  return new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: date.getFullYear() === today.getFullYear() ? undefined : "numeric" }).format(date);
-}
-
-function noteTimeLabel(value: string) {
-  return new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(value)).replace(".", ":");
-}
-
-function NoteContent({ note, onToggleChecklist }: { note: Note; onToggleChecklist: (line: number) => void }) {
-  if (!note.content) return null;
-  return <div className="mt-2 grid gap-0.5 text-sm leading-6 sm:text-[15px]">{note.content.split("\n").map((line, index) => /^☐ |^☑ /.test(line) ? <button type="button" className="flex items-start gap-2 text-left hover:opacity-70" key={`${index}-${line}`} onClick={() => onToggleChecklist(index)}><span className="font-bold">{line.slice(0, 1)}</span><span>{line.slice(2)}</span></button> : <p className="whitespace-pre-wrap break-words" key={`${index}-${line}`}>{line || " "}</p>)}</div>;
-}
-
-function NoteEditorField({ defaultValue }: { defaultValue?: string }) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-  function apply(style: NoteListStyle) {
-    const textarea = ref.current;
-    if (!textarea) return;
-    const result = formatNoteList(textarea.value, textarea.selectionStart, textarea.selectionEnd, style);
-    textarea.value = result.value;
-    textarea.focus();
-    textarea.setSelectionRange(result.selectionStart, result.selectionEnd);
-  }
-  return <label className="grid gap-2"><span className="flex items-center justify-between gap-3"><span className="label">Isi note</span><span className="flex gap-1"><button type="button" className="button-secondary px-2 py-1" onClick={() => apply("bullet")} aria-label="Daftar bullet"><List className="h-4 w-4" /></button><button type="button" className="button-secondary px-2 py-1" onClick={() => apply("numbered")} aria-label="Daftar bernomor"><ListOrdered className="h-4 w-4" /></button><button type="button" className="button-secondary px-2 py-1" onClick={() => apply("checklist")} aria-label="Checklist"><ListChecks className="h-4 w-4" /></button></span></span><textarea ref={ref} className="field min-h-44 resize-y leading-6" name="content" defaultValue={defaultValue} maxLength={20000} placeholder="Tulis bebas, daftar, atau checklist…" /></label>;
 }

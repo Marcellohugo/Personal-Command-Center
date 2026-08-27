@@ -9,6 +9,17 @@ import {
 
 const liabilityTypes = new Set(["credit_card", "debt"]);
 
+function locked(workspace: OfflineWorkspace, date: string) {
+  return workspace.settings.lockedFinanceMonths.includes(date.slice(0, 7));
+}
+
+function audit(workspace: OfflineWorkspace, action: "create" | "update" | "delete" | "import" | "reconcile" | "lock" | "unlock", entityId: string, summary: string) {
+  return {
+    ...workspace,
+    financialAudit: [{ id: id(), action, entityId, summary, occurredAt: new Date().toISOString() }, ...workspace.financialAudit].slice(0, 5000)
+  };
+}
+
 function id() {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
@@ -68,24 +79,26 @@ export function putTransaction(
   transaction: Transaction,
   previous?: Transaction
 ): OfflineWorkspace {
+  if (locked(workspace, transaction.date) || (previous && locked(workspace, previous.date))) return workspace;
   const revertedSources = previous
     ? applyTransactionToSources(workspace.moneySources, previous, -1)
     : workspace.moneySources;
   const revertedGoals = previous ? applyGoalTransfer({ ...workspace, savingGoals: workspace.savingGoals }, previous, -1) : workspace.savingGoals;
   const base = { ...workspace, moneySources: revertedSources, savingGoals: revertedGoals };
 
-  return {
+  const saved = {
     ...base,
     moneySources: applyTransactionToSources(base.moneySources, transaction),
     savingGoals: applyGoalTransfer(base, transaction, 1),
-    transactions: upsertById(base.transactions, transaction)
+    transactions: upsertById(base.transactions, { ...transaction, updatedAt: new Date().toISOString() })
   };
+  return audit(saved, previous ? "update" : "create", transaction.id, `${previous ? "Ubah" : "Tambah"} transaksi ${transaction.note || transaction.kind}`);
 }
 
 export function removeTransaction(workspace: OfflineWorkspace, transactionId: string): OfflineWorkspace {
   const transaction = workspace.transactions.find(({ id }) => id === transactionId);
-  if (!transaction) return workspace;
-  return {
+  if (!transaction || locked(workspace, transaction.date)) return workspace;
+  const removed = {
     ...workspace,
     moneySources: applyTransactionToSources(workspace.moneySources, transaction, -1),
     savingGoals: applyGoalTransfer(workspace, transaction, -1).map((goal) => ({
@@ -94,6 +107,47 @@ export function removeTransaction(workspace: OfflineWorkspace, transactionId: st
     })),
     transactions: workspace.transactions.filter(({ id }) => id !== transactionId)
   };
+  return audit(removed, "delete", transactionId, `Hapus transaksi ${transaction.note || transaction.kind}`);
+}
+
+export function importTransactions(workspace: OfflineWorkspace, transactions: Transaction[]) {
+  let next = workspace;
+  let imported = 0;
+  for (const transaction of transactions) {
+    if (locked(next, transaction.date)) continue;
+    const before = next.transactions.length;
+    next = putTransaction(next, transaction);
+    if (next.transactions.length > before) imported += 1;
+  }
+  return imported ? audit(next, "import", `batch-${Date.now()}`, `Impor ${imported} transaksi`) : next;
+}
+
+export function applyReconciliation(workspace: OfflineWorkspace, sourceId: string, statementDate: string, statementBalance: number, note = "") {
+  const source = workspace.moneySources.find(({ id: current }) => current === sourceId);
+  if (!source || locked(workspace, statementDate)) return workspace;
+  const record = {
+    id: id(),
+    sourceId,
+    statementDate,
+    statementBalance,
+    workspaceBalance: source.balance,
+    difference: statementBalance - source.balance,
+    note,
+    createdAt: new Date().toISOString()
+  };
+  return audit({
+    ...workspace,
+    moneySources: workspace.moneySources.map((item) => item.id === sourceId ? { ...item, balance: statementBalance } : item),
+    transactions: workspace.transactions.map((item) => item.sourceId === sourceId && item.date <= statementDate && (item.status ?? "cleared") !== "pending" ? { ...item, status: "reconciled" as const, reconciledAt: new Date().toISOString(), updatedAt: new Date().toISOString() } : item),
+    reconciliations: [record, ...workspace.reconciliations]
+  }, "reconcile", sourceId, `Rekonsiliasi ${source.name}`);
+}
+
+export function setFinanceMonthLock(workspace: OfflineWorkspace, month: string, isLocked: boolean) {
+  if (!/^\d{4}-\d{2}$/.test(month)) return workspace;
+  const lockedMonths = new Set(workspace.settings.lockedFinanceMonths);
+  if (isLocked) lockedMonths.add(month); else lockedMonths.delete(month);
+  return audit({ ...workspace, settings: { ...workspace.settings, lockedFinanceMonths: [...lockedMonths].sort() } }, isLocked ? "lock" : "unlock", month, `${isLocked ? "Kunci" : "Buka"} periode ${month}`);
 }
 
 export function moveGoalFunds(
@@ -162,6 +216,7 @@ export function runWorkspaceAutomation(workspace: OfflineWorkspace, today = date
     let runs = 0;
     // ponytail: cap catch-up at 36 cycles; use a background job if multi-year backlogs matter.
     while (dueDate <= today && runs < 36) {
+      if (locked(next, dueDate)) break;
       const transaction: Transaction = {
         id: id(),
         kind: recurring.kind === "transfer" ? "transfer" : "expense",
@@ -194,6 +249,7 @@ export function runWorkspaceAutomation(workspace: OfflineWorkspace, today = date
     let dueDate = goal.nextContributionDate;
     let runs = 0;
     while (dueDate <= today && runs < 36) {
+      if (locked(next, dueDate)) break;
       const currentSource = next.moneySources.find(({ id: sourceId }) => sourceId === goal.sourceId);
       if (!currentSource || (!liabilityTypes.has(currentSource.type) && currentSource.balance < goal.autoAmount)) break;
       next = moveGoalFunds(next, goal.id, "deposit", goal.autoAmount, goal.sourceId, dueDate);

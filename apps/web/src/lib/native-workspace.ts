@@ -182,7 +182,7 @@ export function nativeFromWorkspace(workspace: OfflineWorkspace): NativeWorkspac
       date: item.date,
       isDone: item.status === "completed"
     })),
-    notes: workspace.notes.map((item) => ({
+    notes: workspace.notes.filter((item) => (item.status ?? "active") === "active").map((item) => ({
       id: item.id,
       title: item.title,
       body: item.content,
@@ -212,13 +212,16 @@ export function mergeNativeWorkspace(native: NativeWorkspace, current: OfflineWo
   const schedules = new Map(workspace.schedules.map((item) => [item.id, item]));
   const notes = new Map(workspace.notes.map((item) => [item.id, item]));
   const habits = new Map(workspace.habits.map((item) => [item.id, item]));
+  const lockedTransactions = workspace.transactions.filter((item) => workspace.settings.lockedFinanceMonths.includes(item.date.slice(0, 7)));
+  const lockedTransactionIds = new Set(lockedTransactions.map(({ id }) => id));
 
   return {
     ...workspace,
     updatedAt: new Date().toISOString(),
     transactions: [
-      ...workspace.transactions.filter(({ kind }) => kind === "transfer"),
-      ...native.transactions.map((item) => ({
+      ...workspace.transactions.filter(({ kind, id }) => kind === "transfer" && !lockedTransactionIds.has(id)),
+      ...lockedTransactions,
+      ...native.transactions.filter((item) => !lockedTransactionIds.has(item.id) && !workspace.settings.lockedFinanceMonths.includes(item.date.slice(0, 7))).map((item) => ({
         ...transactions.get(item.id),
         id: item.id,
         kind: item.isIncome ? "income" as const : "expense" as const,
@@ -239,14 +242,17 @@ export function mergeNativeWorkspace(native: NativeWorkspace, current: OfflineWo
       status: item.isDone ? "completed" as const : "planned" as const,
       recurrence: schedules.get(item.id)?.recurrence ?? "none" as const
     })),
-    notes: native.notes.map((item) => ({
+    notes: [
+      ...workspace.notes.filter((item) => (item.status ?? "active") !== "active"),
+      ...native.notes.filter((item) => (notes.get(item.id)?.status ?? "active") === "active").map((item) => ({
       ...notes.get(item.id),
       id: item.id,
       title: item.title,
       content: item.body,
       pinned: notes.get(item.id)?.pinned ?? false,
-      updatedAt: item.updatedAt
-    })),
+      updatedAt: item.updatedAt,
+      status: "active" as const
+    }))],
     habits: native.habits.map((item) => ({
       ...habits.get(item.id),
       id: item.id,

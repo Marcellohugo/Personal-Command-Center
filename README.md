@@ -12,6 +12,9 @@ Marco Life OS adalah workspace pribadi local-first untuk mengelola lima area hid
 - Login password-only dengan akun tetap `marco.marcello15@gmail.com`, password awal `123456`, dan perubahan password dari Settings.
 - Sinkronisasi per-record dengan penggabungan otomatis untuk record berbeda dan konflik terarah untuk record yang sama.
 - Google Calendar opsional: agenda aplikasi dikirim ke Google; import Google hanya saat diminta.
+- Pusat Keuangan: laporan per periode, planned-vs-actual budget, rollover/amplop/zero-based, proyeksi arus kas 30/60/90 hari, strategi utang snowball/avalanche, investasi dan kekayaan bersih.
+- Pencatatan keuangan lanjutan: CSV import/export dengan deteksi duplikat, status pending/cleared/reconciled, split kategori, struk + OCR browser, rekonsiliasi, kunci periode, dan audit trail.
+- Workspace Catatan: jurnal dan template, Markdown, lampiran + OCR, pencarian tersimpan, arsip/sampah, riwayat versi, backlink, relasi lintas modul, pengingat, serta konversi checklist menjadi ticket atau agenda.
 - Tampilan biru energik, dark mode, keyboard focus, dan reduced motion.
 
 WhatsApp/WAHA sengaja tidak termasuk dalam runtime maupun `docker compose`.
@@ -37,6 +40,8 @@ docker compose up --build -d
 Dashboard tersedia di [http://localhost:3001/dashboard](http://localhost:3001/dashboard). Password awal pada `.env.example` adalah contoh; deployment pribadi sebaiknya menggantinya dengan password kuat.
 
 Database lokal disimpan pada volume Docker `personal-command-center_postgres_data`. Deployment utama memakai Supabase sebagai PostgreSQL pusat dan Vercel untuk Next.js/PWA. RLS aktif dan Data API tidak mengekspos tabel aplikasi kepada klien anonim.
+
+Seluruh fitur modern—termasuk catatan, keuangan, Kanban, agenda, dan pengaturan—disimpan sebagai satu snapshot workspace pada record Supabase yang sama dan dilindungi login server serta RLS. Lampiran kecil ikut di snapshot; file besar sebaiknya memakai tautan eksternal agar sinkronisasi tetap ringan. Cache browser dan cache Windows hanya salinan offline, bukan database terpisah.
 
 ## Google Calendar
 

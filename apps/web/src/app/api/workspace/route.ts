@@ -31,6 +31,7 @@ async function legacyWorkspace(userId: string): Promise<OfflineWorkspace> {
     updatedAt: new Date().toISOString(),
     categoryGroups: categories,
     settings: {
+      ...createEmptyWorkspace().settings,
       monthlyBudget: user?.monthlyBudget ?? 0,
       hideBalances: false,
       notificationsEnabled: false,
