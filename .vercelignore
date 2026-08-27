@@ -1,0 +1,16 @@
+.git
+.vercel
+.env
+.env.local
+.env.*.local
+node_modules
+**/node_modules
+**/.next
+artifacts
+coverage
+*.tsbuildinfo
+
+# Web deployment does not need native application sources or build output.
+apps/desktop
+apps/desktop-tests
+apps/ios
