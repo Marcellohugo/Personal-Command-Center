@@ -173,5 +173,18 @@ alter table public."WorkspaceConflict" enable row level security;
 alter table public."PushSubscription" enable row level security;
 alter table public."WhatsAppMessageLog" enable row level security;
 
-revoke all on all tables in schema public from anon, authenticated;
-revoke all on all sequences in schema public from anon, authenticated;
+-- Supabase provides these Data API roles. Guard them so the same migration can
+-- also be verified against a plain PostgreSQL instance during CI/local testing.
+do $$
+begin
+  if exists (select 1 from pg_roles where rolname = 'anon') then
+    execute 'revoke all on all tables in schema public from anon';
+    execute 'revoke all on all sequences in schema public from anon';
+  end if;
+
+  if exists (select 1 from pg_roles where rolname = 'authenticated') then
+    execute 'revoke all on all tables in schema public from authenticated';
+    execute 'revoke all on all sequences in schema public from authenticated';
+  end if;
+end
+$$;
