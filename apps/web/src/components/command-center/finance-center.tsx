@@ -2,6 +2,7 @@
 
 import {
   BarChart3,
+  CalendarDays,
   CircleDollarSign,
   Download,
   FileCheck2,
@@ -25,6 +26,7 @@ import {
   investmentSummary,
   monthKey,
   netWorth,
+  paydayPlan,
   yearlyFinanceReport
 } from "@/lib/finance-insights";
 import type { InvestmentHolding, OfflineWorkspace } from "@/lib/offline-workspace";
@@ -35,7 +37,7 @@ type FinanceTab = "overview" | "transactions" | "budget" | "forecast" | "wealth"
 type Props = {
   workspace: OfflineWorkspace;
   updateWorkspace: (updater: (current: OfflineWorkspace) => OfflineWorkspace) => void;
-  onNavigate: (section: "sources" | "goals" | "recurring" | "categories") => void;
+  onNavigate: (section: "sources" | "goals" | "recurring" | "categories" | "pengaturan") => void;
 };
 
 const tabs: Array<{ id: FinanceTab; label: string }> = [
@@ -85,6 +87,7 @@ export function FinanceCenter({ workspace, updateWorkspace, onNavigate }: Props)
   const worth = useMemo(() => netWorth(workspace), [workspace]);
   const investments = useMemo(() => investmentSummary(workspace.investments), [workspace.investments]);
   const forecast = useMemo(() => cashFlowForecast(workspace, dateOnly(), forecastDays), [forecastDays, workspace]);
+  const paydays = useMemo(() => paydayPlan(workspace, month), [month, workspace]);
   const debts = workspace.moneySources.filter(({ type }) => type === "debt" || type === "credit_card");
   const locked = workspace.settings.lockedFinanceMonths.includes(month);
   const maxDaily = Math.max(1, ...report.daily.map(({ income, expense }) => Math.max(income, expense)));
@@ -163,6 +166,10 @@ export function FinanceCenter({ workspace, updateWorkspace, onNavigate }: Props)
           <Metric label="Pengeluaran" value={amount(report.expense, hidden, currency)} tone="red" />
           <Metric label="Arus bersih" value={amount(report.net, hidden, currency)} tone={report.net >= 0 ? "green" : "red"} />
           <Metric label="Kekayaan bersih" value={amount(worth.net, hidden, currency)} tone={worth.net >= 0 ? "blue" : "red"} />
+        </section>
+        <section className="panel rounded-2xl p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3"><div className="flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-600/10 text-blue-700 dark:text-blue-300"><CalendarDays className="h-5 w-5" /></span><div><h3 className="font-black">Peta gajian & kewajiban</h3><p className="mt-1 text-xs text-ink/45 dark:text-paper/45">Tagihan, cicilan, hutang, dan tabungan otomatis dikelompokkan ke gajian sebelumnya.</p></div></div>{paydays.rows.length ? <div className="text-right"><p className="text-xs font-bold uppercase tracking-wide text-ink/40 dark:text-paper/40">{workspace.settings.paydays.length}× gajian · kewajiban {amount(paydays.totalObligations, hidden, currency)}</p><p className="font-black text-emerald-700 dark:text-emerald-300">{amount(paydays.totalIncome, hidden, currency)}</p></div> : null}</div>
+          {paydays.rows.length ? <div className="mt-5 grid gap-3 lg:grid-cols-2">{paydays.rows.map((payday, index) => <article className="rounded-xl border border-line bg-blue-50/40 p-4 dark:border-white/10 dark:bg-blue-400/5" key={payday.date}><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-wide text-blue-700 dark:text-blue-300">Gajian {index + 1} · {new Date(`${payday.date}T12:00:00`).toLocaleDateString("id-ID", { day: "numeric", month: "long" })}</p><p className="mt-1 text-lg font-black">{amount(payday.salary, hidden, currency)}</p></div><div className="text-right"><p className="text-xs text-ink/45 dark:text-paper/45">Sisa setelah alokasi</p><p className={payday.remaining < 0 ? "font-black text-red-600" : "font-black text-emerald-700 dark:text-emerald-300"}>{amount(payday.remaining, hidden, currency)}</p></div></div><div className="mt-4 grid gap-2">{payday.obligations.map((item) => <div className="flex items-start justify-between gap-3 rounded-lg bg-white/80 px-3 py-2 text-sm dark:bg-white/5" key={item.id}><div><p className="font-bold">{item.label}</p><p className={item.needsReserve ? "text-xs text-amber-700 dark:text-amber-300" : "text-xs text-ink/40 dark:text-paper/40"}>{item.date.slice(8, 10)} · {item.kind === "debt" ? "hutang/cicilan" : item.kind === "saving" ? "tabungan" : "tagihan"}{item.needsReserve ? " · siapkan dari bulan lalu" : ""}</p></div><strong>{amount(item.amount, hidden, currency)}</strong></div>)}{!payday.obligations.length ? <p className="text-sm text-ink/40 dark:text-paper/40">Belum ada kewajiban pada rentang gajian ini.</p> : null}</div></article>)}</div> : <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-blue-50 p-4 dark:bg-blue-400/10"><p className="text-sm text-blue-950 dark:text-blue-100">Atur jumlah, tanggal, dan nominal gajian agar pemetaan otomatis aktif.</p><button type="button" className="button-primary" onClick={() => onNavigate("pengaturan")}>Atur jadwal gajian</button></div>}
         </section>
         <section className="grid gap-4 lg:grid-cols-[1.2fr_.8fr]">
           <article className="panel rounded-2xl p-5"><div className="flex items-center gap-3"><BarChart3 className="h-5 w-5 text-blue-700 dark:text-blue-300" /><div><h3 className="font-black">Aktivitas harian</h3><p className="text-xs text-ink/45 dark:text-paper/45">Biru pemasukan, merah pengeluaran</p></div></div><div className="mt-6 flex h-40 items-end gap-1 overflow-hidden">{report.daily.length ? report.daily.map((row) => <div className="flex min-w-2 flex-1 items-end gap-px" key={row.date} title={`${row.date}: +${formatCurrency(row.income, currency)} / -${formatCurrency(row.expense, currency)}`}><span className="w-1/2 rounded-t bg-blue-500" style={{ height: `${Math.max(2, row.income / maxDaily * 100)}%` }} /><span className="w-1/2 rounded-t bg-red-400" style={{ height: `${Math.max(2, row.expense / maxDaily * 100)}%` }} /></div>) : <p className="self-center text-sm text-ink/45 dark:text-paper/45">Belum ada transaksi pada periode ini.</p>}</div></article>

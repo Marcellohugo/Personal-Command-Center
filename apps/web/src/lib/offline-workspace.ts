@@ -222,6 +222,7 @@ export type WorkspaceSchedule = {
 
 export type WorkspaceSettings = {
   monthlyBudget: number;
+  paydays: Array<{ day: number; amount: number }>;
   hideBalances: boolean;
   notificationsEnabled: boolean;
   deletedGoogleEventIds: string[];
@@ -462,6 +463,7 @@ export function createEmptyWorkspace(): OfflineWorkspace {
     },
     settings: {
       monthlyBudget: 0,
+      paydays: [],
       hideBalances: false,
       notificationsEnabled: false,
       deletedGoogleEventIds: [],
@@ -896,6 +898,10 @@ function normalizeWorkspace(value: Record<string, unknown>): OfflineWorkspace {
     })(),
     settings: {
       monthlyBudget: number(settings.monthlyBudget),
+      paydays: rows(settings.paydays).slice(0, 4).map((item) => ({
+        day: Math.max(1, Math.min(31, Math.round(number(item.day, 1)))),
+        amount: Math.max(0, number(item.amount))
+      })),
       hideBalances: settings.hideBalances === true,
       notificationsEnabled: settings.notificationsEnabled === true,
       deletedGoogleEventIds: Array.isArray(settings.deletedGoogleEventIds)

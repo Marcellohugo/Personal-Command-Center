@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { createEmptyWorkspace } from "@/lib/offline-workspace";
-import { budgetReport, cashFlowForecast, debtProjection, exportTransactionsCsv, financeReport, importTransactionsCsv, investmentSummary, yearlyFinanceReport } from "@/lib/finance-insights";
+import { budgetReport, cashFlowForecast, debtProjection, exportTransactionsCsv, financeReport, importTransactionsCsv, investmentSummary, paydayPlan, yearlyFinanceReport } from "@/lib/finance-insights";
 
 describe("finance insights", () => {
   it("menghitung laporan periode, budget, forecast, dan investasi", () => {
     const workspace = createEmptyWorkspace();
-    workspace.moneySources = [{ id: "cash", name: "Bank", type: "deposit_card", balance: 1_000_000 }];
+    workspace.moneySources = [{ id: "cash", name: "Bank", type: "deposit_card", balance: 1_000_000 }, { id: "debt", name: "Kredit", type: "debt", balance: 3_000_000, dueDate: "2026-08-28", minimumPayment: 300_000 }];
+    workspace.settings.paydays = [{ day: 1, amount: 2_000_000 }, { day: 20, amount: 1_000_000 }];
     workspace.categoryGroups = [{ id: "food", name: "Makan", kind: "expense", monthlyBudget: 400_000 }];
     workspace.transactions = [
       { id: "income", kind: "income", amount: 2_000_000, date: "2026-08-01", sourceId: "cash", note: "Gaji", createdAt: "2026-08-01T00:00:00Z" },
@@ -17,7 +18,11 @@ describe("finance insights", () => {
     expect(financeReport(workspace, "2026-08")).toMatchObject({ income: 2_000_000, expense: 250_000, net: 1_750_000 });
     expect(yearlyFinanceReport(workspace, "2026")).toMatchObject({ income: 2_000_000, expense: 250_000, net: 1_750_000 });
     expect(budgetReport(workspace, "2026-08").rows[0]).toMatchObject({ limit: 400_000, remaining: 150_000 });
-    expect(cashFlowForecast(workspace, "2026-08-01", 15).find(({ date }) => date === "2026-08-10")?.balance).toBe(900_000);
+    expect(cashFlowForecast(workspace, "2026-08-01", 15).find(({ date }) => date === "2026-08-10")?.balance).toBe(2_900_000);
+    expect(paydayPlan(workspace, "2026-08").rows).toMatchObject([
+      { date: "2026-08-01", salary: 2_000_000, committed: 100_000, remaining: 1_900_000 },
+      { date: "2026-08-20", salary: 1_000_000, committed: 300_000, remaining: 700_000 }
+    ]);
     expect(investmentSummary(workspace.investments)).toMatchObject({ cost: 100_000, value: 120_000, gain: 22_000 });
   });
 

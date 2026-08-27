@@ -56,11 +56,11 @@ describe("offline workspace", () => {
       notes: [{ id: "note", title: "Jurnal", content: "Isi", pinned: false, updatedAt: "2026-08-27T00:00:00Z", status: "archived", versions: [{ id: "v1", title: "Awal", content: "Lama", updatedAt: "2026-08-26T00:00:00Z" }], links: [{ type: "transaction", id: "tx" }] }],
       budgetPlans: [{ id: "plan", month: "2026-08", categoryId: "food", planned: 500000 }],
       investments: [{ id: "fund", name: "Dana", kind: "fund", units: 2, costBasis: 100, currentPrice: 120, updatedAt: "2026-08-27T00:00:00Z" }],
-      settings: { defaultCurrency: "USD", budgetMethod: "zero_based", budgetRollover: true, lockedFinanceMonths: ["2026-08", "rusak"] }
+      settings: { defaultCurrency: "USD", budgetMethod: "zero_based", budgetRollover: true, lockedFinanceMonths: ["2026-08", "rusak"], paydays: [{ day: 25, amount: 8_000_000 }, { day: 99, amount: -1 }] }
     }));
     expect(workspace.notes[0]).toMatchObject({ status: "archived", versions: [expect.objectContaining({ id: "v1" })], links: [{ type: "transaction", id: "tx" }] });
     expect(workspace.budgetPlans[0].planned).toBe(500000);
     expect(workspace.investments[0].currentPrice).toBe(120);
-    expect(workspace.settings).toMatchObject({ defaultCurrency: "USD", budgetMethod: "zero_based", budgetRollover: true, lockedFinanceMonths: ["2026-08"] });
+    expect(workspace.settings).toMatchObject({ defaultCurrency: "USD", budgetMethod: "zero_based", budgetRollover: true, lockedFinanceMonths: ["2026-08"], paydays: [{ day: 25, amount: 8_000_000 }, { day: 31, amount: 0 }] });
   });
 });

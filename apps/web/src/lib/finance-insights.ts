@@ -128,12 +128,91 @@ function advance(value: string, frequency: "weekly" | "monthly" | "yearly") {
   return dateOnly(date);
 }
 
+function monthDate(month: string, day: number) {
+  const [year, value] = month.split("-").map(Number);
+  const lastDay = new Date(year, value, 0).getDate();
+  return `${month}-${String(Math.min(Math.max(1, day), lastDay)).padStart(2, "0")}`;
+}
+
+export function paydayPlan(workspace: OfflineWorkspace, month: string) {
+  const grouped = new Map<string, number>();
+  for (const payday of workspace.settings.paydays) {
+    const date = monthDate(month, payday.day);
+    grouped.set(date, (grouped.get(date) ?? 0) + payday.amount);
+  }
+  const rows = [...grouped].sort(([left], [right]) => left.localeCompare(right)).map(([date, salary]) => ({
+    date,
+    salary,
+    obligations: [] as Array<{ id: string; label: string; date: string; amount: number; kind: "bill" | "debt" | "saving"; needsReserve: boolean }>,
+    committed: 0,
+    remaining: salary
+  }));
+  const start = monthDate(month, 1);
+  const end = monthDate(month, 31);
+  const obligations: Array<{ id: string; label: string; date: string; amount: number; kind: "bill" | "debt" | "saving" }> = [];
+  const linkedDebts = new Set<string>();
+
+  for (const item of workspace.recurringItems) {
+    let cursor = item.nextDate;
+    let runs = 0;
+    while (cursor < start && runs < 120) { cursor = advance(cursor, item.frequency); runs += 1; }
+    while (cursor <= end && runs < 120) {
+      const debt = workspace.moneySources.find(({ id, type }) => id === item.destinationSourceId && liabilityTypes.has(type));
+      if (debt) linkedDebts.add(debt.id);
+      obligations.push({ id: `${item.id}:${cursor}`, label: item.name, date: cursor, amount: item.amount, kind: debt ? "debt" : "bill" });
+      cursor = advance(cursor, item.frequency);
+      runs += 1;
+    }
+  }
+  for (const goal of workspace.savingGoals) {
+    if (goal.mode !== "cycle" || !goal.autoAmount || !goal.nextContributionDate) continue;
+    let cursor = goal.nextContributionDate;
+    let runs = 0;
+    while (cursor < start && runs < 120) { cursor = advance(cursor, goal.cycle === "weekly" ? "weekly" : "monthly"); runs += 1; }
+    while (cursor <= end && runs < 120) {
+      obligations.push({ id: `${goal.id}:${cursor}`, label: `Tabungan ${goal.name}`, date: cursor, amount: goal.autoAmount, kind: "saving" });
+      cursor = advance(cursor, goal.cycle === "weekly" ? "weekly" : "monthly");
+      runs += 1;
+    }
+  }
+  for (const debt of workspace.moneySources.filter(({ id, type }) => liabilityTypes.has(type) && !linkedDebts.has(id))) {
+    const payment = debt.minimumPayment ?? debt.installmentAmount ?? 0;
+    if (!payment || !debt.dueDate || month < monthKey(debt.dueDate)) continue;
+    obligations.push({ id: `debt:${debt.id}`, label: `Bayar ${debt.name}`, date: monthDate(month, Number(debt.dueDate.slice(8, 10))), amount: payment, kind: "debt" });
+  }
+
+  for (const obligation of obligations.sort((left, right) => left.date.localeCompare(right.date))) {
+    if (!rows.length) continue;
+    const previousPayday = rows.findLastIndex(({ date }) => date <= obligation.date);
+    const index = previousPayday < 0 ? 0 : previousPayday;
+    rows[index].obligations.push({ ...obligation, needsReserve: previousPayday < 0 });
+    rows[index].committed += obligation.amount;
+    rows[index].remaining -= obligation.amount;
+  }
+
+  return {
+    rows,
+    totalIncome: rows.reduce((sum, row) => sum + row.salary, 0),
+    totalObligations: obligations.reduce((sum, item) => sum + item.amount, 0)
+  };
+}
+
 export function cashFlowForecast(workspace: OfflineWorkspace, start = dateOnly(new Date()), days = 90) {
   const end = new Date(`${start}T12:00:00`);
   end.setDate(end.getDate() + Math.max(1, Math.min(days, 366)));
   const endValue = dateOnly(end);
   const events = new Map<string, Array<{ label: string; amount: number }>>();
   const add = (date: string, label: string, amount: number) => events.set(date, [...(events.get(date) ?? []), { label, amount }]);
+  let salaryMonth = monthKey(start);
+  const finalMonth = monthKey(endValue);
+  while (salaryMonth <= finalMonth) {
+    workspace.settings.paydays.forEach((payday, index) => {
+      const date = monthDate(salaryMonth, payday.day);
+      if (payday.amount > 0 && date >= start && date <= endValue) add(date, `Gajian ${index + 1}`, payday.amount);
+    });
+    salaryMonth = shiftMonth(salaryMonth, 1);
+  }
+  const linkedDebts = new Set<string>();
   for (const item of workspace.recurringItems) {
     let cursor = item.nextDate;
     let runs = 0;
@@ -141,6 +220,7 @@ export function cashFlowForecast(workspace: OfflineWorkspace, start = dateOnly(n
       if (cursor >= start) {
         const source = workspace.moneySources.find(({ id }) => id === item.sourceId);
         const destination = workspace.moneySources.find(({ id }) => id === item.destinationSourceId);
+        if (destination && liabilityTypes.has(destination.type)) linkedDebts.add(destination.id);
         const sourceLiquid = Boolean(source && liquidTypes.has(source.type));
         const destinationLiquid = Boolean(destination && liquidTypes.has(destination.type));
         const change = item.kind === "payment"
@@ -149,6 +229,17 @@ export function cashFlowForecast(workspace: OfflineWorkspace, start = dateOnly(n
         add(cursor, item.name, change);
       }
       cursor = advance(cursor, item.frequency);
+      runs += 1;
+    }
+  }
+  for (const debt of workspace.moneySources.filter(({ id, type }) => liabilityTypes.has(type) && !linkedDebts.has(id))) {
+    const payment = debt.minimumPayment ?? debt.installmentAmount ?? 0;
+    if (!payment || !debt.dueDate) continue;
+    let cursor = debt.dueDate;
+    let runs = 0;
+    while (cursor <= endValue && runs < 60) {
+      if (cursor >= start) add(cursor, `Bayar ${debt.name}`, -payment);
+      cursor = advance(cursor, "monthly");
       runs += 1;
     }
   }
