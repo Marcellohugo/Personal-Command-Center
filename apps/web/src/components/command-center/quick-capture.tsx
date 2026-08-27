@@ -57,7 +57,7 @@ export function QuickCapture({ workspace, updateWorkspace }: Props) {
 
   const selected = choices.find((choice) => choice.id === kind)!;
   return <>
-    <button type="button" className="fixed bottom-5 right-5 z-40 grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 text-white shadow-xl shadow-blue-900/30 transition hover:-translate-y-1 hover:scale-105" onClick={() => setOpen(true)} aria-label="Tambah cepat"><Plus className="h-6 w-6" /></button>
+    <button type="button" className="quick-capture-button fixed bottom-5 right-5 z-40" onClick={() => setOpen(true)} aria-label="Tambah cepat"><Plus className="h-5 w-5" /><span className="hidden sm:inline">Tambah cepat</span></button>
     {open ? <div className="fixed inset-0 z-50 grid place-items-end bg-slate-950/55 p-3 backdrop-blur-sm sm:place-items-center" role="dialog" aria-modal="true" aria-label="Tambah cepat">
       <section className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl dark:bg-[#081a36]">
         <header className="flex items-center justify-between border-b border-line p-5 dark:border-white/10"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-blue-600">Quick capture</p><h2 className="mt-1 text-xl font-black">Catat sebelum terlupa</h2></div><button type="button" className="button-secondary h-10 w-10 p-0" onClick={close} aria-label="Tutup"><X className="h-4 w-4" /></button></header>

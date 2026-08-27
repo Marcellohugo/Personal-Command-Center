@@ -90,6 +90,21 @@ const agendaDashboardSections = [modules[0], modules[4], modules[2], modules[3],
 const dashboardSections = [sections[0], ...financeDashboardSections, ...agendaDashboardSections, modules[4]];
 const dashboardNavigation = [sections[0], { ...modules[1], label: "Keuangan" }, modules[0], modules[4], modules[2], modules[3], sections[1], modules[5]];
 
+const pageDescriptions: Record<Section, string> = {
+  overview: "Lihat apa yang penting hari ini dan pilih satu langkah kecil.",
+  notes: "Tangkap ide, rapikan pikiran, dan ubah catatan menjadi aksi.",
+  sources: "Pantau saldo, aset, kartu, dan utang tanpa berpindah-pindah.",
+  goals: "Jaga tabungan dan tujuan besar tetap bergerak setiap minggu.",
+  recurring: "Jangan biarkan tagihan dan pemasukan berulang mengejutkanmu.",
+  categories: "Buat kategori yang membuat laporan keuangan mudah dibaca.",
+  agenda: "Atur waktu dengan tenang dan tahu apa yang harus dilakukan berikutnya.",
+  transaksi: "Catat arus uang dengan cepat, lalu biarkan ringkasan bekerja untukmu.",
+  kebiasaan: "Bangun ritme kecil yang membuat progres terasa nyata.",
+  perkembangan: "Ubah niat menjadi bukti dan lihat pertumbuhanmu dari waktu ke waktu.",
+  proyek: "Kelola pekerjaan seperti papan kanban yang sederhana dan jelas.",
+  pengaturan: "Sesuaikan ruang kerja, sinkronisasi, keamanan, dan notifikasi."
+};
+
 function isWorkspaceSection(section: Section): section is WorkspaceSection {
   return sections.some(({ id }) => id === section);
 }
@@ -601,35 +616,42 @@ export function CommandCenter() {
   const editingRecurring = workspace.recurringItems.find(({ id }) => id === editingId);
   const editingCategory = workspace.categoryGroups.find(({ id }) => id === editingId);
   const navigationActive = financeDashboardSections.some(({ id }) => id === active) ? "transaksi" : active;
+  const activePage = dashboardSections.find(({ id }) => id === active) ?? sections[0];
+  const ActivePageIcon = activePage.icon;
 
   if (!hydrated) {
     return <div className="grid min-h-screen place-items-center text-sm font-semibold text-ink/50">Memuat workspace lokal…</div>;
   }
 
   const page = (
-    <main className="min-w-0 flex-1 px-4 py-5 sm:px-8 sm:py-8">
+    <main id="main-content" className="min-w-0 flex-1 px-4 py-5 sm:px-8 sm:py-8">
       <div className="mx-auto max-w-7xl">
-        <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-clay">
-              Pusat kendali
-            </p>
-            <h1 className="mt-1 text-2xl font-black tracking-tight text-ink sm:text-3xl dark:text-paper">
-              {dashboardSections.find(({ id }) => id === active)?.label}
-            </h1>
+        <header className="page-toolbar">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="brand-mark mt-0.5 hidden sm:grid"><ActivePageIcon className="h-5 w-5" aria-hidden="true" /></span>
+            <div className="min-w-0">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-clay">
+                Pusat kendali
+              </p>
+              <h1 className="mt-1 truncate text-2xl font-black tracking-tight text-ink sm:text-3xl dark:text-paper">
+                {activePage.label}
+              </h1>
+              <p className="mt-1 max-w-2xl text-sm leading-5 text-ink/50 dark:text-paper/50">{pageDescriptions[active]}</p>
+            </div>
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            <button type="button" className="button-secondary h-10 w-10 justify-center p-0" onClick={lockApp} aria-label="Kunci aplikasi" title="Kunci aplikasi"><LockKeyhole className="h-4 w-4" /></button>
+          <div className="toolbar-actions">
+            <span className={cn("status-chip", online ? "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300" : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300")}>
+              {online ? <Wifi className="h-3.5 w-3.5" aria-hidden="true" /> : <WifiOff className="h-3.5 w-3.5" aria-hidden="true" />}
+              <span className="hidden sm:inline">{online ? syncState === "synced" ? "Tersinkron" : syncState === "syncing" ? "Menyinkronkan…" : syncState === "conflict" ? "Konflik data" : "Online" : "Offline · lokal"}</span>
+            </span>
+            <span className="toolbar-divider" aria-hidden="true" />
             <ThemeToggle compact />
             <button type="button" className="button-secondary h-10 w-10 justify-center p-0" onClick={() => setGlobalSearchOpen(true)} aria-label="Pencarian global" title="Pencarian global"><Search className="h-4 w-4" /></button>
-            <span className={cn("inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-bold", online ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300" : "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300")}>
-              {online ? <Wifi className="h-3.5 w-3.5" aria-hidden="true" /> : <WifiOff className="h-3.5 w-3.5" aria-hidden="true" />}
-              {online ? syncState === "synced" ? "Tersinkron" : syncState === "syncing" ? "Menyinkronkan…" : syncState === "conflict" ? "Konflik data" : "Online" : "Offline · tersimpan lokal"}
-            </span>
+            <button type="button" className="button-secondary h-10 w-10 justify-center p-0" onClick={lockApp} aria-label="Kunci aplikasi" title="Kunci aplikasi"><LockKeyhole className="h-4 w-4" /></button>
             {isWorkspaceSection(active) && active !== "overview" ? (
               <button className="button-primary px-3" type="button" onClick={() => openCreate(active)}>
                 <Plus className="h-4 w-4" aria-hidden="true" />
-                <span className="hidden sm:inline">Tambah</span>
+                <span>Tambah</span>
               </button>
             ) : null}
           </div>
@@ -685,7 +707,7 @@ export function CommandCenter() {
               ].map((metric) => {
                 const Icon = metric.icon;
                 return (
-                  <article className="panel group rounded-2xl p-4 sm:p-5" key={metric.label}>
+                  <article className="panel metric-card group" key={metric.label}>
                     <span className="grid h-10 w-10 place-items-center rounded-xl bg-blue-50 text-blue-700 transition group-hover:scale-105 dark:bg-blue-400/10 dark:text-blue-300"><Icon className="h-5 w-5" aria-hidden="true" /></span>
                     <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-ink/45 dark:text-paper/45">{metric.label}</p>
                     <p className="mt-1 break-words text-lg font-black text-ink sm:text-xl dark:text-paper">{metric.value}</p>
@@ -704,7 +726,7 @@ export function CommandCenter() {
                 <div className="mt-5 grid gap-2 sm:grid-cols-2">
                   {financeDashboardSections.map((section) => {
                     const Icon = section.icon;
-                    return <button key={section.id} type="button" onClick={() => changeSection(section.id)} className="flex items-center gap-3 rounded-xl border border-line bg-white p-3 text-left text-sm font-bold transition hover:border-clay dark:border-white/10 dark:bg-white/5"><Icon className="h-4 w-4 text-clay" />{section.label}</button>;
+                    return <button key={section.id} type="button" onClick={() => changeSection(section.id)} className="workspace-link"><Icon className="h-4 w-4 text-clay" />{section.label}</button>;
                   })}
                 </div>
               </article>
@@ -716,7 +738,7 @@ export function CommandCenter() {
                 <div className="mt-5 grid gap-2">
                   {agendaDashboardSections.map((section) => {
                     const Icon = section.icon;
-                    return <button key={section.id} type="button" onClick={() => changeSection(section.id)} className="flex items-center gap-3 rounded-xl border border-line bg-white p-3 text-left text-sm font-bold transition hover:border-moss dark:border-white/10 dark:bg-white/5"><Icon className="h-4 w-4 text-moss dark:text-emerald-300" />{section.label}</button>;
+                    return <button key={section.id} type="button" onClick={() => changeSection(section.id)} className="workspace-link"><Icon className="h-4 w-4 text-moss dark:text-emerald-300" />{section.label}</button>;
                   })}
                 </div>
               </article>
@@ -883,14 +905,70 @@ export function CommandCenter() {
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[280px_1fr]">
-      <aside className="sticky top-0 hidden h-screen border-r border-line bg-paper/90 p-6 backdrop-blur lg:flex lg:flex-col dark:border-white/10 dark:bg-[#061225]/90">
-        <div><p className="text-xs font-bold uppercase tracking-[0.2em] text-clay">Personal</p><h1 className="mt-1 text-xl font-black">Command Center</h1></div>
-        <nav className="mt-8 grid gap-1 overflow-y-auto" aria-label="Navigasi dashboard">
-          {dashboardNavigation.map((section) => { const Icon = section.icon; return <button type="button" key={section.id} onClick={() => changeSection(section.id)} className={cn("flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-bold transition", navigationActive === section.id ? "bg-ink text-paper dark:bg-paper dark:text-ink" : "text-ink/60 hover:bg-white hover:text-ink dark:text-paper/60 dark:hover:bg-white/5 dark:hover:text-paper")}><Icon className="h-4 w-4" />{section.label}</button>; })}
+      <a className="skip-link" href="#main-content">Lewati ke konten utama</a>
+      <aside className="sidebar-shell">
+        <div className="flex items-center gap-3">
+          <span className="brand-mark"><Sparkles className="h-5 w-5" aria-hidden="true" /></span>
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-600 dark:text-blue-300">Marco Life OS</p>
+            <h1 className="mt-0.5 text-lg font-black">Command Center</h1>
+            <p className="text-xs text-ink/40 dark:text-paper/40">Satu langkah lebih maju</p>
+          </div>
+        </div>
+        <p className="sidebar-label">Ruang kerja</p>
+        <nav className="grid gap-1 overflow-y-auto" aria-label="Navigasi dashboard">
+          {dashboardNavigation.map((section) => {
+            const Icon = section.icon;
+            const selected = navigationActive === section.id;
+            return (
+              <button
+                type="button"
+                key={section.id}
+                onClick={() => changeSection(section.id)}
+                className={cn("nav-item", selected && "nav-item-active")}
+                aria-current={selected ? "page" : undefined}
+              >
+                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {section.label}
+              </button>
+            );
+          })}
         </nav>
-        <div className="mt-auto rounded-xl border border-line bg-white p-4 dark:border-white/10 dark:bg-white/5"><p className="text-sm font-black">Semua perangkat</p><p className="mt-1 text-xs leading-5 text-ink/45 dark:text-paper/45">Web/PWA dan Windows memakai workspace Supabase yang sama dengan cache offline lokal.</p></div>
+        <div className="sidebar-sync-card">
+          <div className="flex items-center gap-2">
+            <span className={cn("h-2.5 w-2.5 rounded-full", online ? "bg-emerald-500" : "bg-amber-500")} />
+            <p className="text-sm font-black">Data aman & tersinkron</p>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-ink/50 dark:text-paper/50">Perubahan disimpan ke Supabase dan tetap tersedia saat koneksi terputus.</p>
+        </div>
       </aside>
-      <div className="border-b border-line bg-white/80 px-4 py-3 lg:hidden dark:border-white/10 dark:bg-white/5"><p className="font-black">Command Center</p><nav className="mt-3 grid gap-1" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>{dashboardNavigation.map((section) => { const Icon = section.icon; return <button type="button" key={section.id} onClick={() => changeSection(section.id)} className={cn("flex min-w-0 items-center gap-2 rounded-lg px-2 py-2 text-xs font-bold", navigationActive === section.id ? "bg-ink text-paper dark:bg-paper dark:text-ink" : "bg-white text-ink/55 dark:bg-white/5 dark:text-paper/55")}><Icon className="h-4 w-4 shrink-0" /><span className="truncate">{section.id === "perkembangan" ? "Tumbuh" : section.label}</span></button>; })}</nav></div>
+      <div className="mobile-shell">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="brand-mark h-9 w-9 rounded-xl"><Sparkles className="h-4 w-4" aria-hidden="true" /></span>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-blue-600 dark:text-blue-300">Marco Life OS</p><p className="text-sm font-black">Command Center</p></div>
+          </div>
+          <span className={cn("h-2.5 w-2.5 rounded-full", online ? "bg-emerald-500" : "bg-amber-500")} title={online ? "Online" : "Offline"} />
+        </div>
+        <nav className="mobile-nav mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="Navigasi dashboard">
+          {dashboardNavigation.map((section) => {
+            const Icon = section.icon;
+            const selected = navigationActive === section.id;
+            return (
+              <button
+                type="button"
+                key={section.id}
+                onClick={() => changeSection(section.id)}
+                className={cn("mobile-nav-item", selected && "mobile-nav-item-active")}
+                aria-current={selected ? "page" : undefined}
+              >
+                <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {section.id === "perkembangan" ? "Tumbuh" : section.label}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
       {page}
       <QuickCapture workspace={workspace} updateWorkspace={updateWorkspace} />
     </div>
