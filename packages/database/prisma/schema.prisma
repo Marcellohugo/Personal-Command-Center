@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ScheduleSource {
+  manual
+  // Legacy Google Calendar/WhatsApp values retained for existing rows only.
+  whatsapp
+  google_calendar
+}
+
+enum ExpenseSource {
+  manual
+  // Legacy WhatsApp value retained for existing rows only.
+  whatsapp
+}
+
+enum HabitFrequency {
+  daily
+  weekly
+}
+
+model User {
+  id                  String               @id @default(cuid())
+  name                String?
+  email               String               @unique
+  passwordHash        String?
+  // Legacy integration columns are dormant; runtime integrations are disabled.
+  phoneNumber         String?              @unique
+  monthlyBudget       Int?
+  googleAccessToken   String?
+  googleRefreshToken  String?
+  googleTokenExpiry   DateTime?
+  schedules           Schedule[]
+  expenses            Expense[]
+  habits              Habit[]
+  notes               Note[]
+  workspaceSnapshot   WorkspaceSnapshot?
+  workspaceItems      WorkspaceItem[]
+  workspaceChanges    WorkspaceChange[]
+  workspaceConflicts  WorkspaceConflict[]
+  pushSubscriptions   PushSubscription[]
+  // Legacy WhatsApp logs are retained so existing databases remain readable.
+  whatsappMessageLogs WhatsAppMessageLog[]
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+}
+
+model Schedule {
+  id            String         @id @default(cuid())
+  title         String
+  description   String?
+  date          DateTime
+  startTime     String
+  endTime       String?
+  location      String?
+  source        ScheduleSource @default(manual)
+  // Legacy Google Calendar identifier; no runtime sync writes this field.
+  googleEventId String?
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([userId, date])
+}
+
+model Expense {
+  id        String        @id @default(cuid())
+  amount    Int
+  category  String
+  note      String?
+  date      DateTime
+  source    ExpenseSource @default(manual)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([userId, date])
+  @@index([userId, category])
+}
+
+model Habit {
+  id        String         @id @default(cuid())
+  name      String
+  frequency HabitFrequency @default(daily)
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  logs      HabitLog[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([userId])
+}
+
+model HabitLog {
+  id          String   @id @default(cuid())
+  habitId     String
+  habit       Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  completedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([habitId, completedAt])
+}
+
+model Note {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+  pinned    Boolean  @default(false)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, pinned, updatedAt])
+}
+
+model WorkspaceSnapshot {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  data      Json
+  revision  Int      @default(0)
+  generation Int     @default(1)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Record-level sync tables. The snapshot remains a compatibility bridge for v4 clients;
+// new clients use these tables so changes on different records merge safely.
+model WorkspaceItem {
+  id          String   @id @default(cuid())
+  userId      String
+  entityType  String
+  entityId    String
+  generation  Int      @default(1)
+  version     Int      @default(1)
+  payload     Json?
+  deletedAt   DateTime?
+  deviceId    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, generation, entityType, entityId])
+  @@index([userId, generation, updatedAt])
+}
+
+model WorkspaceChange {
+  id          String   @id @default(cuid())
+  userId      String
+  generation  Int      @default(1)
+  entityType  String
+  entityId    String
+  version     Int
+  payload     Json?
+  deleted     Boolean  @default(false)
+  deviceId    String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, generation, id])
+}
+
+model WorkspaceConflict {
+  id            String   @id @default(cuid())
+  userId        String
+  generation    Int      @default(1)
+  entityType    String
+  entityId      String
+  serverVersion Int
+  serverPayload Json?
+  localPayload  Json?
+  localDeviceId String?
+  resolvedAt    DateTime?
+  createdAt     DateTime @default(now())
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, generation, resolvedAt])
+}
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model WhatsAppMessageLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  from        String?
+  messageId   String?  @unique
+  command     String?
+  rawPayload  Json
+  response    String?
+  status      String   @default("received")
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+}

@@ -1,0 +1,9 @@
+.git
+**/.next
+**/node_modules
+apps/desktop
+apps/ios
+.env*
+coverage
+*.log
+*.tsbuildinfo

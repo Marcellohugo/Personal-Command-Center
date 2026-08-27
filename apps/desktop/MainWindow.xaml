@@ -1,0 +1,337 @@
+<Window x:Class="PersonalCommandCenter.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Marco Life OS"
+        Width="1240"
+        Height="780"
+        MinWidth="980"
+        MinHeight="640"
+        WindowStartupLocation="CenterScreen"
+        Icon="Assets/AppIcon.png"
+        Background="#F4F7FC"
+        FontFamily="Segoe UI"
+        Loaded="OnLoaded"
+        StateChanged="WindowStateChanged">
+  <Window.Resources>
+    <SolidColorBrush x:Key="Ink" Color="#10213A" />
+    <SolidColorBrush x:Key="Moss" Color="#2563EB" />
+    <SolidColorBrush x:Key="Clay" Color="#0F6FEB" />
+    <SolidColorBrush x:Key="Muted" Color="#66768D" />
+    <SolidColorBrush x:Key="Line" Color="#DCE6F2" />
+    <LinearGradientBrush x:Key="HeroGradient" StartPoint="0,0" EndPoint="1,1">
+      <GradientStop Offset="0" Color="#2563EB" />
+      <GradientStop Offset="0.55" Color="#1557D6" />
+      <GradientStop Offset="1" Color="#0B3D91" />
+    </LinearGradientBrush>
+
+    <Style x:Key="Card" TargetType="Border">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="18" />
+      <Setter Property="Padding" Value="20" />
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True"><Setter Property="BorderBrush" Value="#B8D4FF" /><Setter Property="Background" Value="#FCFDFF" /></Trigger>
+      </Style.Triggers>
+    </Style>
+
+    <Style x:Key="BaseButton" TargetType="Button">
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Padding" Value="14,9" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Surface" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="2" CornerRadius="10" Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="Opacity" Value="0.86" /></Trigger>
+              <Trigger Property="IsPressed" Value="True"><Setter TargetName="Surface" Property="Opacity" Value="0.72" /></Trigger>
+              <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Surface" Property="BorderBrush" Value="#7DD3FC" /></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+      <Setter Property="Background" Value="{StaticResource Ink}" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style x:Key="SoftButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+      <Setter Property="Background" Value="#EAF2FF" />
+      <Setter Property="Foreground" Value="{StaticResource Moss}" />
+    </Style>
+    <Style x:Key="DangerButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+      <Setter Property="Background" Value="#FFF0F3" />
+      <Setter Property="Foreground" Value="#D65368" />
+      <Setter Property="Padding" Value="10,7" />
+    </Style>
+    <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource BaseButton}">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#C9D0CC" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Margin" Value="0,2" />
+      <Setter Property="Padding" Value="14,11" />
+    </Style>
+
+    <Style TargetType="TextBox">
+      <Setter Property="Padding" Value="12,9" />
+      <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Background" Value="#FAFCFF" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style TargetType="PasswordBox">
+      <Setter Property="Padding" Value="12,9" />
+      <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="Background" Value="#FAFCFF" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+    </Style>
+    <Style TargetType="ComboBox">
+      <Setter Property="Padding" Value="10,8" />
+      <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+      <Setter Property="Background" Value="White" />
+    </Style>
+    <Style TargetType="DatePicker">
+      <Setter Property="Padding" Value="8,6" />
+      <Setter Property="BorderBrush" Value="{StaticResource Line}" />
+    </Style>
+
+    <DataTemplate x:Key="TransactionRowTemplate">
+      <Grid Margin="0,6">
+        <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
+        <StackPanel><TextBlock FontWeight="SemiBold" Foreground="{StaticResource Ink}" Text="{Binding Title}" /><TextBlock Margin="0,2,0,0" FontSize="11" Foreground="{StaticResource Muted}" Text="{Binding DateLabel}" /></StackPanel>
+        <TextBlock Grid.Column="1" VerticalAlignment="Center" FontWeight="Bold" Foreground="{Binding AmountColor}" Text="{Binding DisplayAmount}" />
+      </Grid>
+    </DataTemplate>
+    <DataTemplate x:Key="AgendaCompactTemplate">
+      <Border Margin="0,4" Padding="10" Background="#F1F6FD" CornerRadius="10"><StackPanel><TextBlock FontWeight="SemiBold" Foreground="{StaticResource Ink}" Text="{Binding Title}" /><TextBlock Margin="0,2,0,0" FontSize="11" Foreground="{StaticResource Muted}" Text="{Binding StatusLabel}" /></StackPanel></Border>
+    </DataTemplate>
+    <DataTemplate x:Key="TransactionManageTemplate">
+      <Border Margin="0,0,0,9" Style="{StaticResource Card}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock FontSize="15" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="{Binding Title}" /><TextBlock Margin="0,3,0,0" FontSize="12" Foreground="{StaticResource Muted}" Text="{Binding DateLabel}" /></StackPanel><TextBlock Grid.Column="1" Margin="20,0" VerticalAlignment="Center" FontSize="15" FontWeight="Bold" Foreground="{Binding AmountColor}" Text="{Binding DisplayAmount}" /><Button Grid.Column="2" Margin="0,0,7,0" Style="{StaticResource SoftButton}" Tag="{Binding Id}" Click="EditTransactionClick" Content="&#xE70F;" FontFamily="Segoe Fluent Icons" AutomationProperties.Name="Ubah transaksi" ToolTip="Ubah" /><Button Grid.Column="3" Style="{StaticResource DangerButton}" Tag="{Binding Id}" Click="DeleteTransactionClick" Content="&#xE74D;" FontFamily="Segoe Fluent Icons" AutomationProperties.Name="Hapus transaksi" ToolTip="Hapus" /></Grid></Border>
+    </DataTemplate>
+    <DataTemplate x:Key="AgendaManageTemplate">
+      <Border Margin="0,0,0,9" Style="{StaticResource Card}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock FontSize="15" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="{Binding Title}" /><TextBlock Margin="0,3,0,0" FontSize="12" Foreground="{StaticResource Muted}" Text="{Binding DateLabel}" /></StackPanel><Button Grid.Column="1" Margin="0,0,7,0" Style="{StaticResource SoftButton}" Tag="{Binding Id}" Click="ToggleAgendaClick" Content="{Binding ToggleLabel}" /><Button Grid.Column="2" Margin="0,0,7,0" Style="{StaticResource SoftButton}" Tag="{Binding Id}" Click="EditAgendaClick" Content="&#xE70F;" FontFamily="Segoe Fluent Icons" AutomationProperties.Name="Ubah agenda" ToolTip="Ubah" /><Button Grid.Column="3" Style="{StaticResource DangerButton}" Tag="{Binding Id}" Click="DeleteAgendaClick" Content="&#xE74D;" FontFamily="Segoe Fluent Icons" AutomationProperties.Name="Hapus agenda" ToolTip="Hapus" /></Grid></Border>
+    </DataTemplate>
+    <DataTemplate x:Key="NoteManageTemplate">
+      <Border Margin="0,0,0,9" Style="{StaticResource Card}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock FontSize="15" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="{Binding Title}" /><TextBlock Margin="0,5,0,0" MaxHeight="44" Foreground="{StaticResource Muted}" Text="{Binding Body}" TextWrapping="Wrap" TextTrimming="CharacterEllipsis" /><TextBlock Margin="0,7,0,0" FontSize="11" Foreground="#6981A4" Text="{Binding UpdatedLabel}" /></StackPanel><Button Grid.Column="1" Margin="18,0,7,0" VerticalAlignment="Top" Style="{StaticResource SoftButton}" Tag="{Binding Id}" Click="EditNoteClick" Content="&#xE70F;" FontFamily="Segoe Fluent Icons" AutomationProperties.Name="Ubah catatan" ToolTip="Ubah" /><Button Grid.Column="2" VerticalAlignment="Top" Style="{StaticResource DangerButton}" Tag="{Binding Id}" Click="DeleteNoteClick" Content="&#xE74D;" FontFamily="Segoe Fluent Icons" AutomationProperties.Name="Hapus catatan" ToolTip="Hapus" /></Grid></Border>
+    </DataTemplate>
+    <DataTemplate x:Key="HabitManageTemplate">
+      <Border Margin="0,0,0,9" Style="{StaticResource Card}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel Orientation="Horizontal"><Border Width="36" Height="36" Margin="0,0,12,0" Background="{Binding StatusBackground}" CornerRadius="18"><TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Bold" Foreground="{Binding StatusColor}" Text="{Binding StatusIcon}" /></Border><StackPanel VerticalAlignment="Center"><TextBlock FontSize="15" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="{Binding Name}" /><TextBlock Margin="0,2,0,0" FontSize="11" Foreground="{StaticResource Muted}" Text="{Binding StreakLabel}" /></StackPanel></StackPanel><Button Grid.Column="1" Margin="0,0,7,0" Style="{StaticResource SoftButton}" Tag="{Binding Id}" Click="ToggleHabitClick" Content="{Binding ToggleLabel}" /><Button Grid.Column="2" Margin="0,0,7,0" Style="{StaticResource SoftButton}" Tag="{Binding Id}" Click="EditHabitClick" Content="&#xE70F;" FontFamily="Segoe Fluent Icons" AutomationProperties.Name="Ubah kebiasaan" ToolTip="Ubah" /><Button Grid.Column="3" Style="{StaticResource DangerButton}" Tag="{Binding Id}" Click="DeleteHabitClick" Content="&#xE74D;" FontFamily="Segoe Fluent Icons" AutomationProperties.Name="Hapus kebiasaan" ToolTip="Hapus" /></Grid></Border>
+    </DataTemplate>
+    <DataTemplate x:Key="GrowthGoalTemplate">
+      <Border Margin="0,0,0,9" Style="{StaticResource Card}"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock FontSize="15" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="{Binding Title}" /><TextBlock Margin="0,3,0,0" FontSize="12" Foreground="{StaticResource Muted}" Text="{Binding AreaLabel}" /><TextBlock Margin="0,5,0,0" Foreground="{StaticResource Moss}" Text="{Binding StatusLabel}" TextWrapping="Wrap" /><TextBlock Margin="0,3,0,0" FontSize="11" Foreground="{StaticResource Muted}" Text="{Binding TargetLabel}" /></StackPanel><TextBlock Grid.Column="1" Margin="18,0" VerticalAlignment="Center" FontSize="18" FontWeight="Bold" Foreground="{StaticResource Moss}" Text="{Binding ProgressLabel}" /><Button Grid.Column="2" Margin="0,0,7,0" Style="{StaticResource SoftButton}" Tag="{Binding Id}" Click="AdvanceGrowthGoalClick" Content="+10%" /><Button Grid.Column="3" Margin="0,0,7,0" Style="{StaticResource SoftButton}" Tag="{Binding Id}" Click="EditGrowthGoalClick" Content="&#xE70F;" FontFamily="Segoe Fluent Icons" AutomationProperties.Name="Ubah tujuan" ToolTip="Ubah" /><Button Grid.Column="4" Style="{StaticResource DangerButton}" Tag="{Binding Id}" Click="DeleteGrowthGoalClick" Content="&#xE74D;" FontFamily="Segoe Fluent Icons" AutomationProperties.Name="Hapus tujuan" ToolTip="Hapus" /></Grid></Border>
+    </DataTemplate>
+    <DataTemplate x:Key="FocusSessionTemplate">
+      <Border Margin="0,0,0,8" Padding="14" Background="#F7FAFF" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="12"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock FontWeight="Bold" Foreground="{StaticResource Ink}" Text="{Binding Title}" /><TextBlock Margin="0,3,0,0" FontSize="11" Foreground="{StaticResource Muted}" Text="{Binding SummaryLabel}" /><TextBlock Margin="0,4,0,0" Foreground="{StaticResource Muted}" Text="{Binding Note}" TextWrapping="Wrap" /></StackPanel><Button Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource DangerButton}" Tag="{Binding Id}" Click="DeleteFocusSessionClick" Content="&#xE74D;" FontFamily="Segoe Fluent Icons" AutomationProperties.Name="Hapus sesi fokus" ToolTip="Hapus" /></Grid></Border>
+    </DataTemplate>
+    <DataTemplate x:Key="DailyReviewTemplate">
+      <Border Margin="0,0,0,8" Padding="14" Background="#F7FAFF" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="12"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock FontWeight="Bold" Foreground="{StaticResource Ink}" Text="{Binding DateLabel}" /><TextBlock Margin="0,3,0,0" FontSize="11" Foreground="{StaticResource Moss}" Text="{Binding ScoreLabel}" /><TextBlock Margin="0,5,0,0" Foreground="{StaticResource Muted}" Text="{Binding Win, StringFormat='Menang: {0}'}" TextWrapping="Wrap" /><TextBlock Margin="0,2,0,0" Foreground="{StaticResource Muted}" Text="{Binding Lesson, StringFormat='Pelajaran: {0}'}" TextWrapping="Wrap" /><TextBlock Margin="0,2,0,0" Foreground="{StaticResource Muted}" Text="{Binding NextStep, StringFormat='Berikutnya: {0}'}" TextWrapping="Wrap" /></StackPanel><Button Grid.Column="1" VerticalAlignment="Top" Style="{StaticResource DangerButton}" Tag="{Binding Id}" Click="DeleteDailyReviewClick" Content="&#xE74D;" FontFamily="Segoe Fluent Icons" AutomationProperties.Name="Hapus refleksi" ToolTip="Hapus" /></Grid></Border>
+    </DataTemplate>
+    <DataTemplate x:Key="TicketCardTemplate">
+      <Border Margin="0,0,0,9" Padding="14" Background="White" BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="13">
+        <StackPanel>
+          <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock FontWeight="Bold" Foreground="{StaticResource Ink}" Text="{Binding Title}" TextWrapping="Wrap" /><TextBlock Grid.Column="1" Margin="8,0,0,0" FontSize="10" FontWeight="Bold" Foreground="{StaticResource Clay}" Text="{Binding PriorityLabel}" /></Grid>
+          <TextBlock Margin="0,6,0,0" FontSize="11" Foreground="{StaticResource Moss}" Text="{Binding LabelsLabel}" TextWrapping="Wrap" />
+          <TextBlock Margin="0,4,0,0" FontSize="10" Foreground="{StaticResource Muted}"><Run Text="{Binding DueLabel}" /><Run Text=" · " /><Run Text="{Binding ChecklistLabel}" /></TextBlock>
+          <Grid Margin="0,10,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><Button Style="{StaticResource SoftButton}" Padding="8,5" Tag="{Binding Id}" Click="MoveTicketLeftClick" Content="←" ToolTip="Pindahkan ke kiri" /><Button Grid.Column="2" Margin="0,0,6,0" Style="{StaticResource SoftButton}" Padding="8,5" Tag="{Binding Id}" Click="EditTicketClick" Content="Detail" /><Button Grid.Column="3" Style="{StaticResource SoftButton}" Padding="8,5" Tag="{Binding Id}" Click="MoveTicketRightClick" Content="→" ToolTip="Pindahkan ke kanan" /></Grid>
+        </StackPanel>
+      </Border>
+    </DataTemplate>
+    <DataTemplate x:Key="TicketChecklistTemplate"><Border Margin="0,0,0,6" Padding="10" Background="#F3F7FD" CornerRadius="9"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><CheckBox IsChecked="{Binding Done}" IsHitTestVisible="False" /><TextBlock Grid.Column="1" Margin="8,0" VerticalAlignment="Center" Foreground="{StaticResource Ink}" Text="{Binding Text}" TextWrapping="Wrap" /><Button Grid.Column="2" Style="{StaticResource SoftButton}" Padding="7,4" Tag="{Binding Id}" Click="ToggleTicketChecklistClick" Content="Ubah" /></Grid></Border></DataTemplate>
+    <DataTemplate x:Key="TicketCommentTemplate"><Border Margin="0,0,0,6" Padding="10" Background="#F3F7FD" CornerRadius="9"><StackPanel><TextBlock Foreground="{StaticResource Ink}" Text="{Binding Body}" TextWrapping="Wrap" /><TextBlock Margin="0,4,0,0" FontSize="10" Foreground="{StaticResource Muted}" Text="{Binding DateLabel}" /></StackPanel></Border></DataTemplate>
+  </Window.Resources>
+
+  <Grid>
+  <Grid x:Name="AppShell">
+    <Grid.ColumnDefinitions><ColumnDefinition Width="238" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+
+    <Border Grid.Column="0" Background="{StaticResource Ink}" Padding="20,26">
+      <Grid>
+        <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+        <StackPanel>
+          <Border Width="52" Height="52" HorizontalAlignment="Left" CornerRadius="15"><Border.Background><ImageBrush ImageSource="Assets/AppIcon.png" Stretch="UniformToFill" /></Border.Background></Border>
+          <TextBlock Margin="0,14,0,0" FontSize="11" FontWeight="Bold" Foreground="#79B7FF" Text="PERSONAL" />
+          <TextBlock Margin="0,2,0,0" FontSize="20" FontWeight="Bold" Foreground="White" Text="Marco Life OS" />
+          <TextBlock Margin="0,5,0,0" FontSize="12" Foreground="#AFC9E8" Text="Native · lokal &amp; tersinkron" />
+        </StackPanel>
+        <StackPanel Grid.Row="1" Margin="0,28,0,0">
+          <Button x:Name="OverviewNav" Style="{StaticResource NavButton}" Tag="overview" Click="NavigateClick"><StackPanel Orientation="Horizontal"><TextBlock Width="28" FontFamily="Segoe Fluent Icons" FontSize="15" Text="&#xE80F;" /><TextBlock Text="Ringkasan" /></StackPanel></Button>
+          <Button x:Name="TransactionsNav" Style="{StaticResource NavButton}" Tag="transactions" Click="NavigateClick"><StackPanel Orientation="Horizontal"><TextBlock Width="28" FontFamily="Segoe Fluent Icons" FontSize="15" Text="&#xE8C7;" /><TextBlock Text="Transaksi" /></StackPanel></Button>
+          <Button x:Name="AgendaNav" Style="{StaticResource NavButton}" Tag="agenda" Click="NavigateClick"><StackPanel Orientation="Horizontal"><TextBlock Width="28" FontFamily="Segoe Fluent Icons" FontSize="15" Text="&#xE787;" /><TextBlock Text="Agenda" /></StackPanel></Button>
+          <Button x:Name="NotesNav" Style="{StaticResource NavButton}" Tag="notes" Click="NavigateClick"><StackPanel Orientation="Horizontal"><TextBlock Width="28" FontFamily="Segoe Fluent Icons" FontSize="15" Text="&#xE70F;" /><TextBlock Text="Catatan" /></StackPanel></Button>
+          <Button x:Name="HabitsNav" Style="{StaticResource NavButton}" Tag="habits" Click="NavigateClick"><StackPanel Orientation="Horizontal"><TextBlock Width="28" FontFamily="Segoe Fluent Icons" FontSize="15" Text="&#xE73E;" /><TextBlock Text="Kebiasaan" /></StackPanel></Button>
+          <Button x:Name="ProjectsNav" Style="{StaticResource NavButton}" Tag="projects" Click="NavigateClick"><StackPanel Orientation="Horizontal"><TextBlock Width="28" FontFamily="Segoe Fluent Icons" FontSize="15" Text="&#xE8A9;" /><TextBlock Text="Proyek" /></StackPanel></Button>
+          <Button x:Name="GrowthNav" Style="{StaticResource NavButton}" Tag="growth" Click="NavigateClick"><StackPanel Orientation="Horizontal"><TextBlock Width="28" FontFamily="Segoe Fluent Icons" FontSize="15" Text="&#xE9D2;" /><TextBlock Text="Perkembangan" /></StackPanel></Button>
+          <Button x:Name="SettingsNav" Style="{StaticResource NavButton}" Tag="settings" Click="NavigateClick"><StackPanel Orientation="Horizontal"><TextBlock Width="28" FontFamily="Segoe Fluent Icons" FontSize="15" Text="&#xE713;" /><TextBlock Text="Pengaturan" /></StackPanel></Button>
+        </StackPanel>
+        <Border Grid.Row="3" Padding="14" Background="#102A52" CornerRadius="14">
+          <StackPanel><TextBlock FontWeight="Bold" Foreground="White" Text="Mode offline" /><TextBlock Margin="0,5,0,10" FontSize="11" Foreground="#AFC9E8" TextWrapping="Wrap" Text="Tetap dapat dipakai tanpa internet; sinkron otomatis saat tersambung." /><Button Style="{StaticResource SoftButton}" Padding="10,7" Click="ExportBackupClick" Content="Ekspor cadangan" /><Button Margin="0,6,0,0" Style="{StaticResource SoftButton}" Padding="10,7" Click="ImportBackupClick" Content="Impor cadangan" /><Button Margin="0,6,0,0" Style="{StaticResource SoftButton}" Padding="10,7" Click="ResetDataClick" Content="Pulihkan data demo" /></StackPanel>
+        </Border>
+      </Grid>
+    </Border>
+
+    <Grid Grid.Column="1">
+      <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="*" /></Grid.RowDefinitions>
+      <Border Padding="34,24,34,18" Background="#FAFCFF" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1">
+        <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="260" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock FontSize="11" FontWeight="Bold" Foreground="{StaticResource Clay}" Text="PUSAT KENDALI" /><TextBlock x:Name="HeaderTitle" Margin="0,3,0,0" FontSize="28" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="Ringkasan" /><TextBlock x:Name="HeaderSubtitle" Margin="0,4,0,0" Foreground="{StaticResource Muted}" Text="Semua yang penting untuk hari ini." /></StackPanel><TextBox x:Name="SearchInput" Grid.Column="1" Margin="18,0" VerticalAlignment="Center" ToolTip="Cari pada halaman aktif" TextChanged="SearchInputChanged" /><Border Grid.Column="2" VerticalAlignment="Center" Padding="12,7" Background="#E9F2FF" CornerRadius="14"><TextBlock x:Name="SyncStatusText" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Moss}" Text="●  Tersimpan lokal" /></Border></Grid>
+      </Border>
+
+      <Grid Grid.Row="1" Margin="34,24,34,30">
+        <ScrollViewer x:Name="OverviewPage" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <Border Padding="28" Background="{StaticResource HeroGradient}" CornerRadius="24">
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="280" /></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,26,0">
+                  <TextBlock x:Name="GreetingText" FontSize="13" FontWeight="SemiBold" Foreground="#DCEBFF" Text="Selamat datang kembali" />
+                  <TextBlock x:Name="MotivationText" Margin="0,7,0,0" MaxWidth="700" HorizontalAlignment="Left" FontSize="28" FontWeight="Bold" Foreground="White" Text="Satu langkah kecil hari ini tetap mengubah arah hidupmu." TextWrapping="Wrap" />
+                  <TextBlock x:Name="CurrentDate" Margin="0,12,0,0" Foreground="#DCEBFF" />
+                  <Button Margin="0,18,0,0" HorizontalAlignment="Left" Style="{StaticResource SoftButton}" Tag="growth" Click="NavigateClick" Content="Lihat perkembangan  →" />
+                </StackPanel>
+                <Border Grid.Column="1" Padding="18" VerticalAlignment="Stretch" Background="#22FFFFFF" BorderBrush="#33FFFFFF" BorderThickness="1" CornerRadius="18">
+                  <StackPanel VerticalAlignment="Center">
+                    <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBlock FontSize="11" FontWeight="Bold" Foreground="#DCEBFF" Text="MISI HARI INI" /><TextBlock Grid.Column="1" HorizontalAlignment="Right" FontFamily="Segoe Fluent Icons" FontSize="18" Foreground="White" Text="&#xE1D9;" /></Grid>
+                    <TextBlock x:Name="MissionText" Margin="0,13,0,0" FontSize="17" FontWeight="Bold" Foreground="White" Text="Tentukan satu langkah berikutnya." TextWrapping="Wrap" />
+                    <StackPanel Margin="0,18,0,0" Orientation="Horizontal"><TextBlock x:Name="OverviewGrowthScoreText" FontSize="28" FontWeight="Bold" Foreground="White" Text="0" /><TextBlock Margin="7,10,0,0" FontSize="11" FontWeight="SemiBold" Foreground="#DCEBFF" Text="SKOR TUMBUH" /></StackPanel>
+                  </StackPanel>
+                </Border>
+              </Grid>
+            </Border>
+            <UniformGrid Margin="0,18,0,0" Columns="4">
+              <Border Margin="0,0,9,0" Style="{StaticResource Card}"><StackPanel><TextBlock FontSize="12" Foreground="{StaticResource Muted}" Text="SALDO BERSIH" /><TextBlock x:Name="BalanceText" Margin="0,8,0,0" FontSize="21" FontWeight="Bold" Foreground="{StaticResource Ink}" /></StackPanel></Border>
+              <Border Margin="3,0,6,0" Style="{StaticResource Card}"><StackPanel><TextBlock FontSize="12" Foreground="{StaticResource Muted}" Text="KELUAR BULAN INI" /><TextBlock x:Name="ExpenseText" Margin="0,8,0,0" FontSize="21" FontWeight="Bold" Foreground="{StaticResource Clay}" /></StackPanel></Border>
+              <Border Margin="6,0,3,0" Style="{StaticResource Card}"><StackPanel><TextBlock FontSize="12" Foreground="{StaticResource Muted}" Text="AGENDA HARI INI" /><TextBlock x:Name="AgendaCountText" Margin="0,8,0,0" FontSize="21" FontWeight="Bold" Foreground="{StaticResource Ink}" /></StackPanel></Border>
+              <Border Margin="9,0,0,0" Style="{StaticResource Card}"><StackPanel><TextBlock FontSize="12" Foreground="{StaticResource Muted}" Text="HABIT SELESAI" /><TextBlock x:Name="HabitCountText" Margin="0,8,0,0" FontSize="21" FontWeight="Bold" Foreground="{StaticResource Moss}" /></StackPanel></Border>
+            </UniformGrid>
+            <Border Margin="0,18,0,0" Padding="22" Background="#EEF5FF" BorderBrush="#C9DFFF" BorderThickness="1" CornerRadius="20">
+              <Grid>
+                <Grid.ColumnDefinitions><ColumnDefinition Width="1*" /><ColumnDefinition Width="1.3*" /></Grid.ColumnDefinitions>
+                <StackPanel Margin="0,0,22,0">
+                  <TextBlock FontSize="11" FontWeight="Bold" Foreground="{StaticResource Clay}" Text="DAILY OS" />
+                  <TextBlock x:Name="LifeCycleText" Margin="0,5,0,0" FontSize="19" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="Siklus belum dimulai" />
+                  <TextBlock x:Name="LifeXpText" Margin="0,5,0,14" Foreground="{StaticResource Muted}" Text="Level 1 · 0 XP" />
+                  <WrapPanel>
+                    <Button x:Name="StartCycleButton" Margin="0,0,7,7" Style="{StaticResource SoftButton}" Click="StartLifeCycleClick" Content="Mulai siklus 12 minggu" />
+                    <Button x:Name="MorningRitualButton" Margin="0,0,7,7" Style="{StaticResource PrimaryButton}" Click="CompleteMorningRitualClick" Content="Ritual pagi" />
+                    <Button x:Name="EveningRitualButton" Margin="0,0,0,7" Style="{StaticResource PrimaryButton}" Click="CompleteEveningRitualClick" Content="Ritual malam" />
+                  </WrapPanel>
+                </StackPanel>
+                <StackPanel Grid.Column="1">
+                  <TextBlock FontSize="11" FontWeight="Bold" Foreground="{StaticResource Clay}" Text="3 PRIORITAS HARI INI" />
+                  <Grid Margin="0,8,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox x:Name="LifePriorityInput" Margin="0,0,8,0" ToolTip="Prioritas paling penting" /><Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Click="AddLifePriorityClick" Content="Tambah" /></Grid>
+                  <ItemsControl x:Name="LifePriorityList" Margin="0,8,0,0">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Border Margin="0,3,0,0" Padding="10,8" Background="White" CornerRadius="10"><StackPanel Orientation="Horizontal"><CheckBox Margin="0,0,9,0" VerticalAlignment="Center" IsChecked="{Binding Done}" Tag="{Binding Id}" Click="ToggleLifePriorityClick" /><TextBlock VerticalAlignment="Center" FontWeight="SemiBold" Foreground="{StaticResource Ink}" Text="{Binding Text}" TextWrapping="Wrap" /></StackPanel></Border>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Grid>
+            </Border>
+            <Grid Margin="0,18,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="3*" /><ColumnDefinition Width="2*" /></Grid.ColumnDefinitions><Border Margin="0,0,9,0" Style="{StaticResource Card}"><StackPanel><TextBlock FontSize="17" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="Transaksi terbaru" /><ItemsControl x:Name="RecentTransactionList" Margin="0,12,0,0" ItemTemplate="{StaticResource TransactionRowTemplate}" /></StackPanel></Border><Border Grid.Column="1" Margin="9,0,0,0" Style="{StaticResource Card}"><StackPanel><TextBlock FontSize="17" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="Fokus hari ini" /><ItemsControl x:Name="TodayAgendaList" Margin="0,12,0,0" ItemTemplate="{StaticResource AgendaCompactTemplate}" /></StackPanel></Border></Grid>
+          </StackPanel>
+        </ScrollViewer>
+
+        <ScrollViewer x:Name="TransactionsPage" Visibility="Collapsed" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <StackPanel><Border Style="{StaticResource Card}"><StackPanel><TextBlock FontSize="17" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="Tambah atau ubah transaksi" /><Grid Margin="0,14,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="2*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="140" /><ColumnDefinition Width="150" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox x:Name="TransactionTitleInput" Margin="0,0,8,0" ToolTip="Nama transaksi" /><TextBox x:Name="TransactionAmountInput" Grid.Column="1" Margin="0,0,8,0" ToolTip="Nominal" /><ComboBox x:Name="TransactionKindInput" Grid.Column="2" Margin="0,0,8,0" SelectedIndex="0"><ComboBoxItem Content="Pengeluaran" /><ComboBoxItem Content="Pemasukan" /></ComboBox><DatePicker x:Name="TransactionDateInput" Grid.Column="3" Margin="0,0,8,0" /><Button x:Name="TransactionSaveButton" Grid.Column="4" Style="{StaticResource PrimaryButton}" Click="AddTransactionClick" Content="Tambah" /><Button x:Name="TransactionCancelButton" Grid.Column="5" Margin="7,0,0,0" Style="{StaticResource SoftButton}" Visibility="Collapsed" Click="CancelTransactionEditClick" Content="Batal" /></Grid></StackPanel></Border><ItemsControl x:Name="TransactionList" Margin="0,14,0,0" ItemTemplate="{StaticResource TransactionManageTemplate}" /></StackPanel>
+        </ScrollViewer>
+
+        <ScrollViewer x:Name="AgendaPage" Visibility="Collapsed" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <StackPanel><Border Style="{StaticResource Card}"><StackPanel><TextBlock FontSize="17" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="Tambah atau ubah agenda" /><Grid Margin="0,14,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="180" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox x:Name="AgendaTitleInput" Margin="0,0,8,0" /><DatePicker x:Name="AgendaDateInput" Grid.Column="1" Margin="0,0,8,0" /><Button x:Name="AgendaSaveButton" Grid.Column="2" Style="{StaticResource PrimaryButton}" Click="AddAgendaClick" Content="Tambahkan" /><Button x:Name="AgendaCancelButton" Grid.Column="3" Margin="7,0,0,0" Style="{StaticResource SoftButton}" Visibility="Collapsed" Click="CancelAgendaEditClick" Content="Batal" /></Grid></StackPanel></Border><ItemsControl x:Name="AgendaList" Margin="0,14,0,0" ItemTemplate="{StaticResource AgendaManageTemplate}" /></StackPanel>
+        </ScrollViewer>
+
+        <ScrollViewer x:Name="NotesPage" Visibility="Collapsed" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <StackPanel><Border Style="{StaticResource Card}"><StackPanel><TextBlock FontSize="17" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="Catatan baru atau perubahan" /><TextBox x:Name="NoteTitleInput" Margin="0,14,0,0" ToolTip="Judul" /><TextBox x:Name="NoteBodyInput" Margin="0,8,0,0" Height="86" AcceptsReturn="True" TextWrapping="Wrap" VerticalContentAlignment="Top" /><StackPanel Margin="0,10,0,0" Orientation="Horizontal"><Button x:Name="NoteSaveButton" Style="{StaticResource PrimaryButton}" Click="AddNoteClick" Content="Simpan catatan" /><Button x:Name="NoteCancelButton" Margin="7,0,0,0" Style="{StaticResource SoftButton}" Visibility="Collapsed" Click="CancelNoteEditClick" Content="Batal" /></StackPanel></StackPanel></Border><ItemsControl x:Name="NoteList" Margin="0,14,0,0" ItemTemplate="{StaticResource NoteManageTemplate}" /></StackPanel>
+        </ScrollViewer>
+
+        <ScrollViewer x:Name="HabitsPage" Visibility="Collapsed" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <StackPanel><Border Style="{StaticResource Card}"><StackPanel><TextBlock FontSize="17" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="Kebiasaan baru atau perubahan" /><Grid Margin="0,14,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox x:Name="HabitNameInput" Margin="0,0,8,0" /><Button x:Name="HabitSaveButton" Grid.Column="1" Style="{StaticResource PrimaryButton}" Click="AddHabitClick" Content="Tambahkan" /><Button x:Name="HabitCancelButton" Grid.Column="2" Margin="7,0,0,0" Style="{StaticResource SoftButton}" Visibility="Collapsed" Click="CancelHabitEditClick" Content="Batal" /></Grid></StackPanel></Border><ItemsControl x:Name="HabitList" Margin="0,14,0,0" ItemTemplate="{StaticResource HabitManageTemplate}" /></StackPanel>
+        </ScrollViewer>
+
+        <ScrollViewer x:Name="ProjectsPage" Visibility="Collapsed" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <Border Padding="24" Background="{StaticResource HeroGradient}" CornerRadius="22"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock FontSize="12" FontWeight="Bold" Foreground="#DCEBFF" Text="PROYEK &amp; TICKET" /><TextBlock Margin="0,5,0,0" FontSize="25" FontWeight="Bold" Foreground="White" Text="Gerakkan pekerjaan sampai benar-benar selesai." /><TextBlock Margin="0,8,0,0" Foreground="#DCEBFF" Text="Backlog, eksekusi, review, dan progres dalam satu board." /></StackPanel><TextBlock Grid.Column="1" Margin="30,0,8,0" VerticalAlignment="Center" FontFamily="Segoe Fluent Icons" FontSize="48" Foreground="#DCEBFF" Text="&#xE8A9;" /></Grid></Border>
+            <Border Margin="0,16,0,0" Style="{StaticResource Card}"><StackPanel><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="240" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><ComboBox x:Name="ProjectBoardInput" DisplayMemberPath="Name" SelectionChanged="ProjectBoardChanged" /><TextBox x:Name="ProjectNameInput" Grid.Column="1" Margin="9,0" ToolTip="Nama proyek baru" /><Button Grid.Column="2" Style="{StaticResource PrimaryButton}" Click="AddProjectClick" Content="Buat proyek" /><Button Grid.Column="3" Margin="7,0,0,0" Style="{StaticResource SoftButton}" Click="ArchiveProjectClick" Content="Arsipkan" /></Grid><TextBox x:Name="ProjectDescriptionInput" Margin="0,9,0,0" ToolTip="Deskripsi proyek baru" /></StackPanel></Border>
+            <Border Margin="0,14,0,0" Style="{StaticResource Card}"><StackPanel><TextBlock x:Name="TicketFormTitle" FontSize="17" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="Ticket baru" /><Grid Margin="0,12,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="2*" /><ColumnDefinition Width="150" /><ColumnDefinition Width="140" /><ColumnDefinition Width="150" /><ColumnDefinition Width="2*" /></Grid.ColumnDefinitions><TextBox x:Name="TicketTitleInput" Margin="0,0,8,0" ToolTip="Judul ticket" /><ComboBox x:Name="TicketStatusInput" Grid.Column="1" Margin="0,0,8,0" SelectedIndex="0"><ComboBoxItem Tag="backlog" Content="Backlog" /><ComboBoxItem Tag="ready" Content="Siap" /><ComboBoxItem Tag="in_progress" Content="Dikerjakan" /><ComboBoxItem Tag="review" Content="Review" /><ComboBoxItem Tag="done" Content="Selesai" /></ComboBox><ComboBox x:Name="TicketPriorityInput" Grid.Column="2" Margin="0,0,8,0" SelectedIndex="1"><ComboBoxItem Tag="low" Content="Rendah" /><ComboBoxItem Tag="medium" Content="Sedang" /><ComboBoxItem Tag="high" Content="Tinggi" /><ComboBoxItem Tag="urgent" Content="Mendesak" /></ComboBox><DatePicker x:Name="TicketDueInput" Grid.Column="3" Margin="0,0,8,0" ToolTip="Tenggat" /><TextBox x:Name="TicketLabelsInput" Grid.Column="4" ToolTip="Label, pisahkan koma" /></Grid><TextBox x:Name="TicketDescriptionInput" Margin="0,9,0,0" Height="64" AcceptsReturn="True" TextWrapping="Wrap" ToolTip="Deskripsi" /><Grid Margin="0,9,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><ComboBox x:Name="TicketAgendaInput" Margin="0,0,8,0" DisplayMemberPath="Title" ToolTip="Hubungkan agenda" /><ComboBox x:Name="TicketGrowthInput" Grid.Column="1" Margin="0,0,8,0" DisplayMemberPath="Title" ToolTip="Hubungkan tujuan" /><Button x:Name="TicketSaveButton" Grid.Column="2" Style="{StaticResource PrimaryButton}" Click="SaveTicketClick" Content="Buat ticket" /><Button x:Name="TicketCancelButton" Grid.Column="3" Margin="7,0,0,0" Style="{StaticResource SoftButton}" Click="CancelTicketEditClick" Content="Batal" Visibility="Collapsed" /><Button x:Name="TicketArchiveButton" Grid.Column="4" Margin="7,0,0,0" Style="{StaticResource SoftButton}" Click="ArchiveTicketClick" Content="Arsipkan" Visibility="Collapsed" /><Button x:Name="TicketDeleteButton" Grid.Column="5" Margin="7,0,0,0" Style="{StaticResource DangerButton}" Click="DeleteTicketClick" Content="Hapus" Visibility="Collapsed" /></Grid></StackPanel></Border>
+            <ScrollViewer Margin="0,14,0,0" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled"><Grid Width="1200"><Grid.ColumnDefinitions><ColumnDefinition Width="240" /><ColumnDefinition Width="240" /><ColumnDefinition Width="240" /><ColumnDefinition Width="240" /><ColumnDefinition Width="240" /></Grid.ColumnDefinitions><Border Margin="0,0,6,0" Padding="10" Background="#EEF3FA" CornerRadius="16"><StackPanel><TextBlock Margin="2,2,2,10" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="●  Backlog" /><ItemsControl x:Name="BacklogTicketList" ItemTemplate="{StaticResource TicketCardTemplate}" /></StackPanel></Border><Border Grid.Column="1" Margin="6,0" Padding="10" Background="#EAF5FF" CornerRadius="16"><StackPanel><TextBlock Margin="2,2,2,10" FontWeight="Bold" Foreground="#0F6FEB" Text="●  Siap" /><ItemsControl x:Name="ReadyTicketList" ItemTemplate="{StaticResource TicketCardTemplate}" /></StackPanel></Border><Border Grid.Column="2" Margin="6,0" Padding="10" Background="#E7F0FF" CornerRadius="16"><StackPanel><TextBlock Margin="2,2,2,10" FontWeight="Bold" Foreground="#1D4ED8" Text="●  Dikerjakan" /><ItemsControl x:Name="InProgressTicketList" ItemTemplate="{StaticResource TicketCardTemplate}" /></StackPanel></Border><Border Grid.Column="3" Margin="6,0" Padding="10" Background="#F1ECFF" CornerRadius="16"><StackPanel><TextBlock Margin="2,2,2,10" FontWeight="Bold" Foreground="#7C3AED" Text="●  Review" /><ItemsControl x:Name="ReviewTicketList" ItemTemplate="{StaticResource TicketCardTemplate}" /></StackPanel></Border><Border Grid.Column="4" Margin="6,0,0,0" Padding="10" Background="#EAF8F1" CornerRadius="16"><StackPanel><TextBlock Margin="2,2,2,10" FontWeight="Bold" Foreground="#15803D" Text="●  Selesai" /><ItemsControl x:Name="DoneTicketList" ItemTemplate="{StaticResource TicketCardTemplate}" /></StackPanel></Border></Grid></ScrollViewer>
+            <Border x:Name="TicketDetailPanel" Margin="0,14,0,0" Style="{StaticResource Card}" Visibility="Collapsed"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions><StackPanel Margin="0,0,8,0"><TextBlock FontSize="16" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="Checklist" /><Grid Margin="0,10,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox x:Name="TicketChecklistInput" Margin="0,0,7,0" /><Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Click="AddTicketChecklistClick" Content="Tambah" /></Grid><ItemsControl x:Name="TicketChecklistList" Margin="0,10,0,0" ItemTemplate="{StaticResource TicketChecklistTemplate}" /></StackPanel><StackPanel Grid.Column="1" Margin="8,0,0,0"><TextBlock FontSize="16" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="Komentar" /><Grid Margin="0,10,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox x:Name="TicketCommentInput" Margin="0,0,7,0" /><Button Grid.Column="1" Style="{StaticResource PrimaryButton}" Click="AddTicketCommentClick" Content="Kirim" /></Grid><ItemsControl x:Name="TicketCommentList" Margin="0,10,0,0" ItemTemplate="{StaticResource TicketCommentTemplate}" /></StackPanel></Grid></Border>
+          </StackPanel>
+        </ScrollViewer>
+
+        <ScrollViewer x:Name="GrowthPage" Visibility="Collapsed" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <Border Padding="24" Background="{StaticResource HeroGradient}" CornerRadius="22"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><StackPanel><TextBlock FontSize="12" FontWeight="Bold" Foreground="#DCEBFF" Text="PUSAT PERKEMBANGAN" /><TextBlock Margin="0,5,0,0" FontSize="25" FontWeight="Bold" Foreground="White" Text="Tumbuh dengan bukti, bukan sekadar niat." /><TextBlock Margin="0,8,0,0" Foreground="#DCEBFF" Text="Tujuan, fokus, refleksi, dan momentum dalam satu tempat." /></StackPanel><StackPanel Grid.Column="1" Margin="30,0,8,0" VerticalAlignment="Center"><TextBlock x:Name="GrowthScoreText" HorizontalAlignment="Center" FontSize="38" FontWeight="Bold" Foreground="White" Text="0" /><TextBlock FontSize="10" FontWeight="Bold" Foreground="#DCEBFF" Text="SKOR TUMBUH" /></StackPanel></Grid></Border>
+            <UniformGrid Margin="0,16,0,0" Columns="4"><Border Margin="0,0,7,0" Style="{StaticResource Card}"><StackPanel><TextBlock FontSize="11" Foreground="{StaticResource Muted}" Text="TUJUAN AKTIF" /><TextBlock x:Name="ActiveGrowthGoalsText" Margin="0,7,0,0" FontSize="20" FontWeight="Bold" Foreground="{StaticResource Ink}" /></StackPanel></Border><Border Margin="3,0,4,0" Style="{StaticResource Card}"><StackPanel><TextBlock FontSize="11" Foreground="{StaticResource Muted}" Text="PROGRES RATA-RATA" /><TextBlock x:Name="AverageGrowthText" Margin="0,7,0,0" FontSize="20" FontWeight="Bold" Foreground="{StaticResource Moss}" /></StackPanel></Border><Border Margin="4,0,3,0" Style="{StaticResource Card}"><StackPanel><TextBlock FontSize="11" Foreground="{StaticResource Muted}" Text="FOKUS 7 HARI" /><TextBlock x:Name="WeeklyFocusText" Margin="0,7,0,0" FontSize="20" FontWeight="Bold" Foreground="{StaticResource Ink}" /></StackPanel></Border><Border Margin="7,0,0,0" Style="{StaticResource Card}"><StackPanel><TextBlock FontSize="11" Foreground="{StaticResource Muted}" Text="STREAK REFLEKSI" /><TextBlock x:Name="ReviewStreakText" Margin="0,7,0,0" FontSize="20" FontWeight="Bold" Foreground="{StaticResource Moss}" /></StackPanel></Border></UniformGrid>
+
+            <Border Margin="0,16,0,0" Style="{StaticResource Card}"><StackPanel><TextBlock FontSize="17" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="Tujuan perkembangan" /><Grid Margin="0,14,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="2*" /><ColumnDefinition Width="140" /><ColumnDefinition Width="110" /><ColumnDefinition Width="150" /><ColumnDefinition Width="2*" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions><TextBox x:Name="GrowthGoalTitleInput" Margin="0,0,8,0" ToolTip="Tujuan" /><ComboBox x:Name="GrowthGoalAreaInput" Grid.Column="1" Margin="0,0,8,0" SelectedIndex="1"><ComboBoxItem Content="Karier" /><ComboBoxItem Content="Belajar" /><ComboBoxItem Content="Kesehatan" /><ComboBoxItem Content="Keuangan" /><ComboBoxItem Content="Pribadi" /></ComboBox><TextBox x:Name="GrowthGoalProgressInput" Grid.Column="2" Margin="0,0,8,0" ToolTip="Progres 0-100" Text="0" /><DatePicker x:Name="GrowthGoalTargetInput" Grid.Column="3" Margin="0,0,8,0" ToolTip="Target tanggal" /><TextBox x:Name="GrowthGoalNextActionInput" Grid.Column="4" Margin="0,0,8,0" ToolTip="Langkah berikutnya" /><Button x:Name="GrowthGoalSaveButton" Grid.Column="5" Style="{StaticResource PrimaryButton}" Click="AddGrowthGoalClick" Content="Tambah" /><Button x:Name="GrowthGoalCancelButton" Grid.Column="6" Margin="7,0,0,0" Style="{StaticResource SoftButton}" Visibility="Collapsed" Click="CancelGrowthGoalEditClick" Content="Batal" /></Grid></StackPanel></Border>
+            <ItemsControl x:Name="GrowthGoalList" Margin="0,12,0,0" ItemTemplate="{StaticResource GrowthGoalTemplate}" />
+
+            <Grid Margin="0,8,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+              <StackPanel Margin="0,0,7,0"><Border Style="{StaticResource Card}"><StackPanel><TextBlock FontSize="17" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="Catat fokus atau belajar" /><TextBox x:Name="FocusTitleInput" Margin="0,12,0,0" ToolTip="Aktivitas" /><Grid Margin="0,8,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="110" /><ColumnDefinition Width="145" /></Grid.ColumnDefinitions><ComboBox x:Name="FocusAreaInput" Margin="0,0,8,0" SelectedIndex="1"><ComboBoxItem Content="Karier" /><ComboBoxItem Content="Belajar" /><ComboBoxItem Content="Kesehatan" /><ComboBoxItem Content="Keuangan" /><ComboBoxItem Content="Pribadi" /></ComboBox><TextBox x:Name="FocusMinutesInput" Grid.Column="1" Margin="0,0,8,0" ToolTip="Menit" Text="30" /><DatePicker x:Name="FocusDateInput" Grid.Column="2" /></Grid><TextBox x:Name="FocusNoteInput" Margin="0,8,0,0" Height="58" AcceptsReturn="True" TextWrapping="Wrap" ToolTip="Catatan hasil" /><Button Margin="0,10,0,0" HorizontalAlignment="Left" Style="{StaticResource PrimaryButton}" Click="AddFocusSessionClick" Content="Simpan sesi" /></StackPanel></Border><ItemsControl x:Name="FocusSessionList" Margin="0,12,0,0" ItemTemplate="{StaticResource FocusSessionTemplate}" /></StackPanel>
+              <StackPanel Grid.Column="1" Margin="7,0,0,0"><Border Style="{StaticResource Card}"><StackPanel><TextBlock FontSize="17" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="Refleksi harian" /><Grid Margin="0,12,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="100" /><ColumnDefinition Width="100" /></Grid.ColumnDefinitions><DatePicker x:Name="ReviewDateInput" Margin="0,0,8,0" /><ComboBox x:Name="ReviewMoodInput" Grid.Column="1" Margin="0,0,8,0" SelectedIndex="3"><ComboBoxItem Content="1" /><ComboBoxItem Content="2" /><ComboBoxItem Content="3" /><ComboBoxItem Content="4" /><ComboBoxItem Content="5" /></ComboBox><ComboBox x:Name="ReviewEnergyInput" Grid.Column="2" SelectedIndex="3"><ComboBoxItem Content="1" /><ComboBoxItem Content="2" /><ComboBoxItem Content="3" /><ComboBoxItem Content="4" /><ComboBoxItem Content="5" /></ComboBox></Grid><TextBox x:Name="ReviewWinInput" Margin="0,8,0,0" ToolTip="Kemenangan hari ini" /><TextBox x:Name="ReviewLessonInput" Margin="0,8,0,0" ToolTip="Pelajaran hari ini" /><TextBox x:Name="ReviewNextStepInput" Margin="0,8,0,0" ToolTip="Langkah berikutnya" /><Button Margin="0,10,0,0" HorizontalAlignment="Left" Style="{StaticResource PrimaryButton}" Click="AddDailyReviewClick" Content="Simpan refleksi" /></StackPanel></Border><ItemsControl x:Name="DailyReviewList" Margin="0,12,0,0" ItemTemplate="{StaticResource DailyReviewTemplate}" /></StackPanel>
+            </Grid>
+          </StackPanel>
+        </ScrollViewer>
+
+        <ScrollViewer x:Name="SettingsPage" Visibility="Collapsed" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+          <StackPanel>
+            <Border Style="{StaticResource Card}">
+              <StackPanel>
+                <TextBlock FontSize="18" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="Privasi dan anggaran" />
+                <TextBlock Margin="0,5,0,18" Foreground="{StaticResource Muted}" Text="Atur tampilan nominal dan batas pengeluaran bulanan." />
+                <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Muted}" Text="ANGGARAN BULANAN" />
+                <TextBox x:Name="MonthlyBudgetInput" Margin="0,7,0,14" Width="280" HorizontalAlignment="Left" ToolTip="Anggaran bulanan" />
+                <CheckBox x:Name="HideBalancesInput" Margin="0,0,0,18" FontWeight="SemiBold" Foreground="{StaticResource Ink}" Content="Sembunyikan nominal di aplikasi" />
+                <WrapPanel><Button Margin="0,0,7,7" Style="{StaticResource PrimaryButton}" Click="SaveSettingsClick" Content="Simpan pengaturan" /><Button Margin="0,0,7,7" Style="{StaticResource SoftButton}" Click="LockNowClick" Content="Kunci sekarang" /><Button Margin="0,0,0,7" Style="{StaticResource SoftButton}" Click="ChangePinClick" Content="Ganti PIN" /></WrapPanel>
+              </StackPanel>
+            </Border>
+            <Border Margin="0,14,0,0" Style="{StaticResource Card}">
+              <StackPanel>
+                <TextBlock FontSize="18" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="Sinkronisasi semua perangkat" />
+                <TextBlock x:Name="SyncStatusDescription" Margin="0,5,0,18" Foreground="{StaticResource Muted}" Text="Hubungkan aplikasi ke server Personal Command Center." />
+                <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Muted}" Text="ALAMAT SERVER" />
+                <TextBox x:Name="SyncServerInput" Margin="0,7,0,14" ToolTip="Contoh: https://command.example.com" />
+                <TextBlock FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Muted}" Text="KATA SANDI SERVER" />
+                <PasswordBox x:Name="SyncPasswordInput" Margin="0,7,0,14" ToolTip="Kosongkan jika server lokal tidak memakai kata sandi" />
+                <WrapPanel>
+                  <Button Margin="0,0,7,7" Style="{StaticResource PrimaryButton}" Click="SaveSyncSettingsClick" Content="Simpan &amp; sinkronkan" />
+                  <Button Margin="0,0,7,7" Style="{StaticResource SoftButton}" Click="SyncNowClick" Content="Sinkronkan sekarang" />
+                  <Button Margin="0,0,7,7" Style="{StaticResource SoftButton}" Click="UseServerDataClick" Content="Gunakan data server" />
+                  <Button Margin="0,0,0,7" Style="{StaticResource SoftButton}" Click="UploadLocalDataClick" Content="Kirim data perangkat" />
+                </WrapPanel>
+                <TextBlock Margin="0,5,0,0" FontSize="11" Foreground="{StaticResource Muted}" TextWrapping="Wrap" Text="Gunakan HTTPS untuk server jaringan. HTTP hanya diterima untuk localhost." />
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
+    </Grid>
+  </Grid>
+  <Grid x:Name="LockOverlay">
+    <Grid.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Offset="0" Color="#061225" /><GradientStop Offset="0.52" Color="#0B3D91" /><GradientStop Offset="1" Color="#2563EB" /></LinearGradientBrush></Grid.Background>
+    <Border Width="450" Margin="24" Padding="34" HorizontalAlignment="Center" VerticalAlignment="Center" Background="#FAFFFFFF" BorderBrush="#55FFFFFF" BorderThickness="1" CornerRadius="28">
+      <StackPanel>
+        <Border Width="62" Height="62" HorizontalAlignment="Left" Background="#2563EB" CornerRadius="18"><TextBlock HorizontalAlignment="Center" VerticalAlignment="Center" FontFamily="Segoe Fluent Icons" FontSize="28" Foreground="White" Text="&#xE72E;" /></Border>
+        <TextBlock Margin="0,24,0,0" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Clay}" Text="PERSONAL COMMAND CENTER" />
+        <TextBlock x:Name="LockTitle" Margin="0,5,0,0" FontSize="30" FontWeight="Bold" Foreground="{StaticResource Ink}" Text="Buka aplikasi" />
+        <TextBlock x:Name="LockDescription" Margin="0,8,0,22" Foreground="{StaticResource Muted}" Text="Masukkan PIN 6 digit. Tidak memerlukan akun atau sign in." TextWrapping="Wrap" />
+        <TextBlock FontSize="11" FontWeight="Bold" Foreground="{StaticResource Muted}" Text="PIN 6 DIGIT" />
+        <PasswordBox x:Name="LockPinInput" Margin="0,7,0,0" Height="46" MaxLength="6" FontSize="18" KeyDown="LockPinKeyDown" />
+        <StackPanel x:Name="LockConfirmPanel" Margin="0,14,0,0">
+          <TextBlock FontSize="11" FontWeight="Bold" Foreground="{StaticResource Muted}" Text="ULANGI PIN" />
+          <PasswordBox x:Name="LockConfirmInput" Margin="0,7,0,0" Height="46" MaxLength="6" FontSize="18" KeyDown="LockPinKeyDown" />
+        </StackPanel>
+        <TextBlock x:Name="LockStatus" Margin="0,12,0,0" FontSize="12" FontWeight="SemiBold" Foreground="#D65368" TextWrapping="Wrap" />
+        <Button x:Name="UnlockButton" Margin="0,18,0,0" Height="48" Style="{StaticResource PrimaryButton}" Click="UnlockClick" Content="Buka dengan aman" />
+        <TextBlock Margin="0,16,0,0" HorizontalAlignment="Center" FontSize="11" Foreground="{StaticResource Muted}" Text="PIN dilindungi Windows DPAPI dan hanya berlaku di perangkat ini." TextAlignment="Center" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+  </Grid>
+  </Grid>
+</Window>

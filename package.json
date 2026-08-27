@@ -2,47 +2,31 @@
   "name": "personal-command-center",
   "version": "0.1.0",
   "private": true,
+  "workspaces": [
+    "apps/web",
+    "packages/database"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "prisma generate && next build",
-    "start": "next start",
-    "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:studio": "prisma studio",
-    "seed": "tsx prisma/seed.ts"
+    "dev": "npm run dev --workspace @personal-command-center/web",
+    "build": "npm run build --workspace @personal-command-center/web",
+    "start": "npm run start --workspace @personal-command-center/web",
+    "lint": "npm run lint --workspace @personal-command-center/web",
+    "typecheck": "npm run typecheck --workspace @personal-command-center/web",
+    "test": "npm run test --workspace @personal-command-center/web",
+    "test:watch": "npm run test:watch --workspace @personal-command-center/web",
+    "db:generate": "npm run generate --workspace @personal-command-center/database",
+    "db:migrate": "npm run migrate --workspace @personal-command-center/database",
+    "db:deploy": "npm run deploy --workspace @personal-command-center/database",
+    "db:studio": "npm run studio --workspace @personal-command-center/database",
+    "db:seed": "npm run seed --workspace @personal-command-center/database",
+    "desktop:build": "dotnet build apps/desktop/PersonalCommandCenter.Desktop.csproj",
+    "desktop:run": "dotnet run --project apps/desktop/PersonalCommandCenter.Desktop.csproj",
+    "desktop:test": "dotnet run --project apps/desktop-tests/PersonalCommandCenter.Desktop.Tests.csproj",
+    "desktop:publish": "dotnet publish apps/desktop/PersonalCommandCenter.Desktop.csproj -c Release -p:PublishProfile=win-x64"
   },
-  "dependencies": {
-    "@prisma/client": "^6.10.1",
-    "bcryptjs": "^3.0.2",
-    "clsx": "^2.1.1",
-    "date-fns": "^4.1.0",
-    "lucide-react": "^0.468.0",
-    "next": "^15.3.4",
-    "next-auth": "^5.0.0-beta.31",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "recharts": "^2.15.3",
-    "tailwind-merge": "^2.6.0",
-    "zod": "^3.25.67"
-  },
-  "devDependencies": {
-    "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^22.15.32",
-    "@types/react": "^19.0.12",
-    "@types/react-dom": "^19.0.4",
-    "autoprefixer": "^10.4.20",
-    "dotenv": "^17.4.2",
-    "eslint": "^9.29.0",
-    "eslint-config-next": "^15.3.4",
-    "postcss": "^8.4.49",
-    "prisma": "^6.10.1",
-    "tailwindcss": "^3.4.17",
-    "tsx": "^4.20.3",
-    "typescript": "^5.8.3",
-    "vitest": "^3.2.4"
+  "overrides": {
+    "deepmerge-ts": "^8.0.2",
+    "esbuild": "0.28.1",
+    "postcss": "8.5.26"
   }
 }

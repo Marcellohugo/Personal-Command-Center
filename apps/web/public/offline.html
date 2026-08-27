@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1f3a" />
+    <title>Offline — Personal Command Center</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family: Aptos, "Segoe UI", sans-serif;
+      }
+      * { box-sizing: border-box; }
+      body {
+        align-items: center;
+        background: linear-gradient(135deg, #e9f2ff, #f4f7fc 55%, #dbeafe);
+        color: #0b1f3a;
+        display: flex;
+        justify-content: center;
+        margin: 0;
+        min-height: 100vh;
+        padding: 24px;
+      }
+      main {
+        background: rgba(255, 255, 255, 0.88);
+        border: 1px solid #dce6f2;
+        border-radius: 24px;
+        box-shadow: 0 16px 40px rgba(11, 31, 58, 0.08);
+        max-width: 520px;
+        padding: 48px 32px;
+        text-align: center;
+        width: 100%;
+      }
+      .mark {
+        align-items: center;
+        background: #0b1f3a;
+        border-radius: 20px;
+        color: #f4f7fc;
+        display: inline-flex;
+        font-size: 32px;
+        height: 72px;
+        justify-content: center;
+        margin-bottom: 24px;
+        width: 72px;
+      }
+      .eyebrow {
+        color: #2563eb;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+      }
+      h1 { font-size: 32px; margin: 12px 0; }
+      p:not(.eyebrow) { color: #52647c; line-height: 1.7; margin: 0 auto 28px; max-width: 400px; }
+      a {
+        background: #2563eb;
+        border-radius: 10px;
+        color: #fff;
+        display: inline-block;
+        font-weight: 700;
+        padding: 12px 20px;
+        text-decoration: none;
+      }
+      a:focus-visible { outline: 3px solid #38bdf8; outline-offset: 3px; }
+      @media (prefers-color-scheme: dark) {
+        body { background: linear-gradient(135deg, #0b2b5c, #061225 55%, #0a3c78); color: #f4f7fc; }
+        main { background: rgba(11, 31, 58, 0.9); border-color: rgba(255, 255, 255, 0.12); }
+        .eyebrow { color: #93c5fd; }
+        p:not(.eyebrow) { color: #bfdbfe; }
+        a { background: #f4f7fc; color: #0b1f3a; }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="mark" aria-hidden="true">✦</div>
+      <p class="eyebrow">PERSONAL COMMAND CENTER</p>
+      <h1>Anda sedang offline</h1>
+      <p>
+        Dashboard tetap dapat dipakai tanpa internet setelah pernah dibuka. Notes serta data keuangan
+        tersimpan lokal di perangkat ini.
+      </p>
+      <a href="/dashboard">Buka dashboard offline</a>
+    </main>
+  </body>
+</html>

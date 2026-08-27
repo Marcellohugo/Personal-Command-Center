@@ -1,9 +1,17 @@
 node_modules
 .next
+apps/web/.next
+apps/desktop/bin
+apps/desktop/obj
+apps/desktop-tests/bin
+apps/desktop-tests/obj
+.dart_tool
+.flutter-plugins-dependencies
 .env
 .env.local
 .env.*.local
 dist
 coverage
+artifacts/
 *.log
 *.tsbuildinfo

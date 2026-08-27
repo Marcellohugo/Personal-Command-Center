@@ -1,96 +1,77 @@
-# Personal Command Center
+# Marco Life OS
 
-MVP web app untuk mencatat jadwal, pengeluaran, habit harian, ringkasan aktivitas, serta fondasi integrasi WhatsApp Business Cloud API dan Google Calendar.
+Marco Life OS adalah workspace pribadi local-first untuk mengelola lima area hidup: karier, belajar, kesehatan, keuangan, dan personal. Web/PWA di Vercel dan Windows memakai PostgreSQL pusat di Supabase, tetapi tetap dapat mencatat saat offline.
 
-## Stack
+## Fitur utama
 
-- Next.js App Router
-- TypeScript
-- Tailwind CSS
-- Prisma ORM
-- PostgreSQL
-- NextAuth credentials login
-- Zod
-- Recharts
+- Dashboard terpandu dengan ritual pagi dan malam yang dapat dilewati.
+- Maksimal tiga prioritas harian, agenda, notes, transaksi, habit, focus session, dan ticket Kanban bergaya GitHub.
+- Siklus 12 minggu, goal tanpa batas per area, weekly review lima menit, dan maksimal tiga quest manual.
+- Progres goal manual 0–100% serta evidence aktivitas yang ditampilkan terpisah.
+- Gamifikasi konsistensi: XP, level lifetime, streak, Perfect Day, dan achievement.
+- Login password-only dengan akun tetap `marco.marcello15@gmail.com`, password awal `123456`, dan perubahan password dari Settings.
+- Sinkronisasi per-record dengan penggabungan otomatis untuk record berbeda dan konflik terarah untuk record yang sama.
+- Google Calendar opsional: agenda aplikasi dikirim ke Google; import Google hanya saat diminta.
+- Tampilan biru energik, dark mode, keyboard focus, dan reduced motion.
 
-## Struktur Folder
+WhatsApp/WAHA sengaja tidak termasuk dalam runtime maupun `docker compose`.
 
-- `src/app` - App Router pages, API routes, auth route, webhook WhatsApp.
-- `src/components` - Layout, form, chart, dan dashboard UI.
-- `src/lib` - Prisma client, auth config, validasi Zod, helper dashboard, parser WhatsApp, services integrasi.
-- `prisma/schema.prisma` - Model `User`, `Schedule`, `Expense`, `Habit`, `HabitLog`, `WhatsAppMessageLog`.
-- `prisma/seed.ts` - Seed user demo, jadwal, pengeluaran, dan habit.
-- `tests` - Unit test untuk parser WhatsApp dan helper dashboard.
+## Struktur
 
-## Setup Lokal
+- `apps/web` — Next.js/PWA, dashboard, API, dan cache offline browser.
+- `apps/desktop` — Windows WPF, cache lokal terenkripsi DPAPI, dan notifikasi lokal.
+- `apps/ios` — source Flutter lama yang dinonaktifkan dan tidak ikut CI/deployment.
+- `packages/database` — Prisma schema dan migration PostgreSQL.
 
-1. Install dependency:
+## Menjalankan lokal
 
-```bash
+Persyaratan: Node.js, Docker Desktop, dan .NET 10 SDK untuk Windows.
+
+```powershell
 npm install
+Copy-Item .env.example .env
+npm run db:generate
+docker compose up --build -d
 ```
 
-2. Buat file `.env` dari `.env.example`, lalu isi `DATABASE_URL` PostgreSQL dan `AUTH_SECRET`.
+Dashboard tersedia di [http://localhost:3001/dashboard](http://localhost:3001/dashboard). Password awal pada `.env.example` adalah contoh; deployment pribadi sebaiknya menggantinya dengan password kuat.
 
-3. Jalankan migration dan seed:
-
-```bash
-npm run prisma:migrate
-npm run seed
-```
-
-4. Jalankan development server:
-
-```bash
-npm run dev
-```
-
-5. Buka `http://localhost:3000`.
-
-User demo dari seed:
-
-- Email: `demo@example.com`
-- Password: `password123`
-
-## Script
-
-- `npm run dev` - menjalankan Next.js dev server.
-- `npm run build` - generate Prisma Client dan build Next.js.
-- `npm run typecheck` - cek TypeScript.
-- `npm test` - jalankan Vitest.
-- `npm run prisma:migrate` - menjalankan Prisma migration dev.
-- `npm run prisma:studio` - membuka Prisma Studio.
-- `npm run seed` - isi data demo.
-
-## WhatsApp Business Cloud API
-
-Environment variable yang disiapkan:
-
-- `WHATSAPP_ACCESS_TOKEN`
-- `WHATSAPP_PHONE_NUMBER_ID`
-- `WHATSAPP_VERIFY_TOKEN`
-
-Endpoint:
-
-- `POST /api/webhooks/whatsapp`
-- `GET /api/webhooks/whatsapp` untuk verifikasi webhook token.
-
-Command MVP:
-
-- `/jadwal Besok 10:00 Rapat bimbingan`
-- `/uang 25000 kopi`
-- `/ringkasan hari ini`
-- `/total minggu ini`
-- `/total bulan ini`
-
-Untuk MVP single-user, webhook akan mencocokkan nomor WhatsApp ke `User.phoneNumber`. Jika tidak ditemukan, app memakai user pertama sebagai fallback agar integrasi awal tetap bisa diuji lokal.
+Database lokal disimpan pada volume Docker `personal-command-center_postgres_data`. Deployment utama memakai Supabase sebagai PostgreSQL pusat dan Vercel untuk Next.js/PWA. RLS aktif dan Data API tidak mengekspos tabel aplikasi kepada klien anonim.
 
 ## Google Calendar
 
-File placeholder ada di `src/lib/google-calendar.ts`:
+1. Aktifkan Google Calendar API dan buat OAuth Web Client.
+2. Tambahkan redirect URI `http://localhost:3001/api/auth/google/callback`.
+3. Isi `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, dan `GOOGLE_CALENDAR_ENABLED="true"`.
+4. Buka **Pengaturan → Integrasi → Hubungkan Google**.
 
-- `createCalendarEvent()`
-- `updateCalendarEvent()`
-- `deleteCalendarEvent()`
+Token disimpan terenkripsi menggunakan `APP_SESSION_SECRET`. Jangan meng-commit `.env` atau secret Google.
 
-OAuth penuh belum diimplementasikan sesuai scope MVP.
+## Pengingat push
+
+Docker menjalankan scheduler ringan setiap menit untuk ritual pagi, ritual malam, dan review mingguan. Kunci VAPID lokal disimpan di `.env`; aktifkan dari **Pengaturan → Aktifkan pengingat** pada setiap browser/perangkat. Untuk deployment non-Docker, panggil `POST /api/notifications/run` setiap menit dengan header `Authorization: Bearer <CRON_SECRET>`.
+
+## Windows
+
+```powershell
+npm run desktop:test
+npm run desktop:run
+npm run desktop:publish
+```
+
+Installer pribadi tidak ditandatangani secara berbayar sehingga Windows SmartScreen dapat menampilkan peringatan. Cache lokal berada di `%LOCALAPPDATA%\PersonalCommandCenter\workspace.json`.
+
+## iPhone
+
+Build Flutter native dinonaktifkan. Gunakan PWA melalui Safari → **Add to Home Screen**; source lama tetap di `apps/ios` hanya sebagai arsip yang dapat dipulihkan.
+
+## Pemeriksaan
+
+```bash
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+npm run desktop:build
+npm run desktop:test
+```
